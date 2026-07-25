@@ -141,7 +141,59 @@ input[type="text"], textarea {
   font-family: inherit;
   margin-bottom: 8px;
 }
+/* Timetable Grid Styles */
+.table-container {
+  overflow-x: auto;
+  margin: 14px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
 
+#roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  font-size: 14px;
+}
+
+#roster-table th {
+  background-color: #f8fafc;
+  color: var(--text-dark);
+  font-weight: 700;
+  padding: 12px;
+  border-bottom: 2px solid var(--border);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+#roster-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+#roster-table tr:last-child td {
+  border-bottom: none;
+}
+
+.day-axis {
+  font-weight: 700;
+  color: #0f172a;
+  background-color: #f1f5f9;
+  width: 30%;
+  white-space: nowrap;
+}
+
+.shift-info {
+  color: #334155;
+  font-weight: 500;
+}
+
+.shift-off {
+  color: #94a3b8;
+  font-style: italic;
+}
 /* Fixed Bottom Dashboard Navigation */
 .bottom-nav {
   position: fixed;
