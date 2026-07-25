@@ -23,8 +23,8 @@
     </div>
 
     <div id="dashboard-card" class="card hidden">
-      <div class="header">
-        <h2 id="welcome-msg">Welcome</h2>
+      <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 id="welcome-msg" style="margin:0;">Welcome</h2>
         <button id="logout-btn" class="btn-secondary">Logout</button>
       </div>
 
@@ -34,7 +34,26 @@
         <button id="toggle-clock-btn" class="btn btn-clock">Clock In</button>
       </div>
 
-      <h3>Shift Log</h3>
+      <div class="schedule-section card" style="margin-top: 20px; text-align: left; background: #ffffff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px;">
+        <h3 id="roster-title" style="margin-bottom: 4px; margin-top:0;">Weekly Schedule</h3>
+        <p id="roster-updated" style="font-size: 12px; color: #64748b; margin-top: 0; margin-bottom: 12px;">No schedule posted yet.</p>
+
+        <div id="roster-content" style="margin: 12px 0;"></div>
+
+        <div id="admin-schedule-box" class="hidden" style="margin-top: 16px; padding-top: 16px; border-top: 2px dashed #e2e8f0;">
+          <h4 style="margin-top: 0; color: #10b981;">Manager Tool: Update Schedule</h4>
+          
+          <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">Week Title</label>
+          <input type="text" id="admin-title-input" placeholder="e.g. Schedule: July 27 - Aug 2" style="width: 100%; box-sizing: border-box; margin-bottom: 12px;" />
+
+          <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">Schedule Text OR Image Link</label>
+          <textarea id="admin-content-input" rows="4" placeholder="Type text schedule OR paste image URL here..." style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e2e8f0; font-family: inherit; margin-bottom: 12px; box-sizing: border-box;"></textarea>
+
+          <button id="publish-roster-btn" class="btn" style="background-color: #0f172a;">Publish Schedule</button>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 24px;">Shift Log</h3>
       <table id="logs-table">
         <thead>
           <tr>
