@@ -3,16 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Employee Clock-In Portal</title>
+  <title>Employee Portal</title>
   
   <link rel="manifest" href="manifest.json">
-  
   <link rel="stylesheet" href="style.css">
-  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <div class="container">
+  <div class="app-container">
     
     <div id="login-card" class="card">
       <h2>Employee Login</h2>
@@ -22,50 +20,69 @@
       </form>
     </div>
 
-    <div id="dashboard-card" class="card hidden">
-      <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h2 id="welcome-msg" style="margin:0;">Welcome</h2>
-        <button id="logout-btn" class="btn-secondary">Logout</button>
-      </div>
+    <div id="dashboard-card" class="hidden">
+      
+      <header class="app-header">
+        <span id="welcome-msg">Welcome</span>
+        <button id="logout-btn" class="btn-logout">Logout</button>
+      </header>
 
-      <div class="clock-section">
-        <p id="live-clock">00:00:00 AM</p>
-        <p id="status-text">Status: <strong>Clocked Out</strong></p>
-        <button id="toggle-clock-btn" class="btn btn-clock">Clock In</button>
-      </div>
-
-      <div class="schedule-section card" style="margin-top: 20px; text-align: left; background: #ffffff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px;">
-        <h3 id="roster-title" style="margin-bottom: 4px; margin-top:0;">Weekly Schedule</h3>
-        <p id="roster-updated" style="font-size: 12px; color: #64748b; margin-top: 0; margin-bottom: 12px;">No schedule posted yet.</p>
-
-        <div id="roster-content" style="margin: 12px 0;"></div>
-
-        <div id="admin-schedule-box" class="hidden" style="margin-top: 16px; padding-top: 16px; border-top: 2px dashed #e2e8f0;">
-          <h4 style="margin-top: 0; color: #10b981;">Manager Tool: Update Schedule</h4>
-          
-          <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">Week Title</label>
-          <input type="text" id="admin-title-input" placeholder="e.g. Schedule: July 27 - Aug 2" style="width: 100%; box-sizing: border-box; margin-bottom: 12px;" />
-
-          <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px;">Schedule Text OR Image Link</label>
-          <textarea id="admin-content-input" rows="4" placeholder="Type text schedule OR paste image URL here..." style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e2e8f0; font-family: inherit; margin-bottom: 12px; box-sizing: border-box;"></textarea>
-
-          <button id="publish-roster-btn" class="btn" style="background-color: #0f172a;">Publish Schedule</button>
+      <main id="tab-clockin" class="tab-content active">
+        <div class="card clock-card">
+          <p id="live-clock">00:00:00 AM</p>
+          <p id="status-text">Status: <strong>Clocked Out</strong></p>
+          <button id="toggle-clock-btn" class="btn btn-clock">Clock In</button>
         </div>
-      </div>
 
-      <h3 style="margin-top: 24px;">Shift Log</h3>
-      <table id="logs-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Clock In</th>
-            <th>Clock Out</th>
-            <th>Total Hours</th>
-          </tr>
-        </thead>
-        <tbody id="logs-body">
-          </tbody>
-      </table>
+        <div class="card logs-card">
+          <h3>Your Shift History</h3>
+          <table id="logs-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>In</th>
+                <th>Out</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="logs-body">
+              </tbody>
+          </table>
+        </div>
+      </main>
+
+      <main id="tab-timetable" class="tab-content hidden">
+        <div class="card schedule-card">
+          <h3 id="roster-title">Weekly Schedule</h3>
+          <p id="roster-updated" class="subtext">Loading schedule...</p>
+
+          <div id="roster-content"></div>
+
+          <div id="admin-schedule-box" class="admin-box hidden">
+            <h4>Manager Tool: Update Schedule</h4>
+            
+            <label>Week Title</label>
+            <input type="text" id="admin-title-input" placeholder="e.g. Schedule: July 27 - Aug 2" />
+
+            <label>Schedule Text OR Image Link</label>
+            <textarea id="admin-content-input" rows="4" placeholder="Type text schedule OR paste image URL here..."></textarea>
+
+            <button id="publish-roster-btn" class="btn btn-dark">Publish Schedule</button>
+          </div>
+        </div>
+      </main>
+
+      <nav class="bottom-nav">
+        <button id="nav-clockin" class="nav-btn active">
+          <span class="nav-icon">⏰</span>
+          <span class="nav-label">Clock In</span>
+        </button>
+        <button id="nav-timetable" class="nav-btn">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Timetable</span>
+        </button>
+      </nav>
+
     </div>
 
   </div>
