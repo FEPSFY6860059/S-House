@@ -3,7 +3,7 @@ const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Application State Variables
+// State Variables
 let currentEmployee = null;
 let currentEmployeeName = "";
 let isManager = false;
@@ -28,13 +28,13 @@ const navTimetable = document.getElementById("nav-timetable");
 const tabClockin = document.getElementById("tab-clockin");
 const tabTimetable = document.getElementById("tab-timetable");
 
-// 2. Live Clock Update
+// 2. Live Clock
 setInterval(() => {
   const now = new Date();
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// 3. Bottom Navigation Tab Switching
+// 3. Tab Switching
 if (navClockin && navTimetable) {
   navClockin.addEventListener("click", () => switchTab("clockin"));
   navTimetable.addEventListener("click", () => switchTab("timetable"));
@@ -54,7 +54,7 @@ function switchTab(tabName) {
   }
 }
 
-// 4. Auto-Login Memory Handling
+// 4. Auto-Login Memory
 async function autoLogin() {
   const savedEmployeeId = localStorage.getItem("clockin_employee_id");
 
@@ -78,23 +78,20 @@ async function setupLoggedInUser(employee) {
   currentEmployeeName = employee.name;
   isManager = (employee.role === "manager");
 
-  // Save session to browser
   localStorage.setItem("clockin_employee_id", currentEmployee);
 
   welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
   loginCard.classList.add("hidden");
   dashboardCard.classList.remove("hidden");
 
-  // Load initial data
   await checkActiveShift();
   await loadLogs();
   await loadWeeklyRoster();
 }
 
-// Run Auto-Login Check on Initial Page Load
 autoLogin();
 
-// 5. Login Form Handler
+// 5. Login
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -118,7 +115,7 @@ if (loginForm) {
   });
 }
 
-// 6. Logout Handler
+// 6. Logout
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("clockin_employee_id");
@@ -133,7 +130,7 @@ if (logoutBtn) {
   });
 }
 
-// 7. Active Shift Verification
+// 7. Check Shift
 async function checkActiveShift() {
   const { data } = await supabaseClient
     .from("shift_logs")
@@ -151,14 +148,13 @@ async function checkActiveShift() {
   }
 }
 
-// 8. Clock In / Clock Out Handler
+// 8. Clock In / Out Toggle
 if (toggleClockBtn) {
   toggleClockBtn.addEventListener("click", async () => {
     const now = new Date();
     toggleClockBtn.disabled = true;
 
     if (!activeShiftId) {
-      // Clock In Action
       toggleClockBtn.textContent = "Clocking In...";
 
       const { data, error } = await supabaseClient
@@ -167,7 +163,7 @@ if (toggleClockBtn) {
         .select();
 
       if (error) {
-        alert("Clock-in failed. Please try again.");
+        alert("Clock-in failed.");
         toggleClockBtn.disabled = false;
         updateClockUI(false);
         return;
@@ -178,7 +174,6 @@ if (toggleClockBtn) {
         updateClockUI(true);
       }
     } else {
-      // Clock Out Action
       toggleClockBtn.textContent = "Clocking Out...";
 
       const { data: shift } = await supabaseClient
@@ -218,7 +213,7 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// 9. Load Personal Shift History
+// 9. Load Logs
 async function loadLogs() {
   const { data: logs } = await supabaseClient
     .from("shift_logs")
@@ -254,14 +249,13 @@ function renderLogs(logs) {
   });
 }
 
-// 10. Load & Render Axis Table Timetable
+// 10. Load & Render Weekly Timetable
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
   const rosterUpdated = document.getElementById("roster-updated");
   const rosterTableBody = document.getElementById("roster-table-body");
 
-  // Show Manager Publishing Box ONLY if logged in user is a manager
   if (adminBox) {
     if (isManager) {
       adminBox.classList.remove("hidden");
@@ -286,40 +280,35 @@ async function loadWeeklyRoster() {
 
   const rawText = roster.image_url || "";
 
-  // Parse text line-by-line into Day Axis table rows
   if (rawText.trim().length > 0) {
     const lines = rawText.split("\n");
 
     lines.forEach((line) => {
       if (!line.trim()) return;
 
-      let day = "";
-      let details = "";
+      let name = "Staff";
+      let scheduleText = line.trim();
 
       if (line.includes(":")) {
         const parts = line.split(":");
-        day = parts[0].trim();
-        details = parts.slice(1).join(":").trim();
-      } else {
-        day = "Note";
-        details = line.trim();
+        name = parts[0].trim();
+        scheduleText = parts.slice(1).join(":").trim();
       }
 
-      const isOff = details.toUpperCase() === "OFF";
-
       const row = document.createElement("tr");
+      
       row.innerHTML = `
-        <td class="day-axis">${day}</td>
-        <td class="shift-info ${isOff ? 'shift-off' : ''}">${details}</td>
+        <td style="font-weight:700; color:#0f172a; white-space:nowrap;">${name}</td>
+        <td colspan="6" style="color:#334155; font-weight:500;">${scheduleText}</td>
       `;
       rosterTableBody.appendChild(row);
     });
   } else {
-    rosterTableBody.innerHTML = `<tr><td colspan="2" style="text-align:center;">No schedule details posted yet.</td></tr>`;
+    rosterTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No schedule posted yet.</td></tr>`;
   }
 }
 
-// 11. Manager Schedule Publishing Event Listener
+// 11. Manager Publish
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
