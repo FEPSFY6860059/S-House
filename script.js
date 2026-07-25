@@ -21,7 +21,7 @@ const logsBody = document.getElementById("logs-body");
 // Update Live Clock
 setInterval(() => {
   const now = new Date();
-  liveClock.textContent = now.toLocaleTimeString();
+  if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
 // Login Handler
@@ -54,7 +54,11 @@ async function checkActiveShift() {
     .select("*")
     .eq("employee_id", currentEmployee)
     .is("clock_out", null)
-    .single();
+    .maybeSingle(); // Changed from .single() to avoid crashing on 0 rows
+
+  if (error) {
+    console.error("Error checking active shift:", error.message);
+  }
 
   if (data) {
     activeShiftId = data.id;
@@ -70,35 +74,51 @@ toggleClockBtn.addEventListener("click", async () => {
   const now = new Date();
 
   if (!activeShiftId) {
-    // Clocking In: Insert new row with clock_in time
+    // Clocking In
     const { data, error } = await supabase
       .from("shift_logs")
       .insert([{ employee_id: currentEmployee, clock_in: now.toISOString() }])
       .select();
+
+    if (error) {
+      console.error("Clock in failed:", error.message);
+      alert("Clock-in failed. Check browser console for details.");
+      return;
+    }
 
     if (data && data.length > 0) {
       activeShiftId = data[0].id;
       updateClockUI(true);
     }
   } else {
-    // Clocking Out: Retrieve original clock_in to calculate total hours
-    const { data: shift } = await supabase
+    // Clocking Out
+    const { data: shift, error: fetchError } = await supabase
       .from("shift_logs")
       .select("clock_in")
       .eq("id", activeShiftId)
-      .single();
+      .maybeSingle();
+
+    if (fetchError || !shift) {
+      console.error("Error fetching shift start time:", fetchError?.message);
+      return;
+    }
 
     const clockInTime = new Date(shift.clock_in);
     const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
 
-    // Update the row with clock_out and hours
-    await supabase
+    const { error: updateError } = await supabase
       .from("shift_logs")
       .update({
         clock_out: now.toISOString(),
         total_hours: hoursWorked
       })
       .eq("id", activeShiftId);
+
+    if (updateError) {
+      console.error("Clock out failed:", updateError.message);
+      alert("Clock-out failed. Check browser console for details.");
+      return;
+    }
 
     activeShiftId = null;
     updateClockUI(false);
@@ -128,6 +148,11 @@ async function loadLogs() {
     .not("clock_out", "is", null)
     .order("clock_in", { ascending: false });
 
+  if (error) {
+    console.error("Error loading logs:", error.message);
+    return;
+  }
+
   if (logs) {
     renderLogs(logs);
   }
@@ -148,5 +173,4 @@ function renderLogs(logs) {
     `;
     logsBody.appendChild(row);
   });
-}
 }
