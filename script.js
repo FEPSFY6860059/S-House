@@ -34,7 +34,7 @@ setInterval(() => {
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// 3. Bottom Tab Switching
+// 3. Tab Navigation Switching
 if (navClockin && navTimetable) {
   navClockin.addEventListener("click", () => switchTab("clockin"));
   navTimetable.addEventListener("click", () => switchTab("timetable"));
@@ -54,7 +54,7 @@ function switchTab(tabName) {
   }
 }
 
-// 4. Auto-Login Memory
+// 4. Auto-Login Memory Handling
 async function autoLogin() {
   const savedEmployeeId = localStorage.getItem("clockin_employee_id");
 
@@ -91,7 +91,7 @@ async function setupLoggedInUser(employee) {
 
 autoLogin();
 
-// 5. Login Handler
+// 5. Login Form Handler
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -130,7 +130,7 @@ if (logoutBtn) {
   });
 }
 
-// 7. Check Active Shift
+// 7. Active Shift Verification
 async function checkActiveShift() {
   const { data } = await supabaseClient
     .from("shift_logs")
@@ -148,7 +148,7 @@ async function checkActiveShift() {
   }
 }
 
-// 8. Clock In / Out Actions
+// 8. Clock In / Clock Out Action Handler
 if (toggleClockBtn) {
   toggleClockBtn.addEventListener("click", async () => {
     const now = new Date();
@@ -213,7 +213,7 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// 9. Load Logs
+// 9. Load Employee Shift History Logs
 async function loadLogs() {
   const { data: logs } = await supabaseClient
     .from("shift_logs")
@@ -249,11 +249,12 @@ function renderLogs(logs) {
   });
 }
 
-// 10. Load & Parse Timetable Grid (Mon - Sat)
+// 10. Load & Render Timetable (Days on Row Axis, Employees across Top Headers)
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
   const rosterUpdated = document.getElementById("roster-updated");
+  const rosterHeaderRow = document.getElementById("roster-header-row");
   const rosterTableBody = document.getElementById("roster-table-body");
 
   if (adminBox) {
@@ -271,76 +272,89 @@ async function loadWeeklyRoster() {
     .limit(1)
     .maybeSingle();
 
-  if (!roster || !rosterTableBody) return;
+  if (!roster || !rosterTableBody || !rosterHeaderRow) return;
 
   if (rosterTitle) rosterTitle.textContent = roster.week_title;
   if (rosterUpdated) rosterUpdated.textContent = `Updated: ${new Date(roster.updated_at).toLocaleDateString()}`;
 
+  rosterHeaderRow.innerHTML = "<th>Day</th>";
   rosterTableBody.innerHTML = "";
 
   const rawText = roster.image_url || "";
-
-  if (rawText.trim().length > 0) {
-    const lines = rawText.split("\n");
-
-    lines.forEach((line) => {
-      if (!line.trim()) return;
-
-      let name = "Staff";
-      let details = line.trim();
-
-      if (line.includes(":")) {
-        const parts = line.split(":");
-        name = parts[0].trim();
-        details = parts.slice(1).join(":").trim();
-      }
-
-      // Track shift slots for Mon-Sat
-      const daysOrder = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-      const shifts = { MON: "-", TUE: "-", WED: "-", THU: "-", FRI: "-", SAT: "-" };
-
-      // Split entries separated by commas
-      const dayEntries = details.split(",");
-
-      dayEntries.forEach((entry) => {
-        const trimmedEntry = entry.trim();
-        daysOrder.forEach((dayKey) => {
-          if (trimmedEntry.toUpperCase().includes(dayKey)) {
-            let timeStr = trimmedEntry.replace(new RegExp(dayKey, "gi"), "").trim();
-            shifts[dayKey] = timeStr || "Scheduled";
-          }
-        });
-      });
-
-      const matchedAny = Object.values(shifts).some(val => val !== "-");
-
-      const row = document.createElement("tr");
-
-      if (matchedAny) {
-        row.innerHTML = `
-          <td>${name}</td>
-          <td class="${shifts.MON === '-' ? 'shift-off' : 'shift-cell'}">${shifts.MON}</td>
-          <td class="${shifts.TUE === '-' ? 'shift-off' : 'shift-cell'}">${shifts.TUE}</td>
-          <td class="${shifts.WED === '-' ? 'shift-off' : 'shift-cell'}">${shifts.WED}</td>
-          <td class="${shifts.THU === '-' ? 'shift-off' : 'shift-cell'}">${shifts.THU}</td>
-          <td class="${shifts.FRI === '-' ? 'shift-off' : 'shift-cell'}">${shifts.FRI}</td>
-          <td class="${shifts.SAT === '-' ? 'shift-off' : 'shift-cell'}">${shifts.SAT}</td>
-        `;
-      } else {
-        row.innerHTML = `
-          <td>${name}</td>
-          <td colspan="6" class="shift-cell">${details}</td>
-        `;
-      }
-
-      rosterTableBody.appendChild(row);
-    });
-  } else {
-    rosterTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No schedule details posted yet.</td></tr>`;
+  if (!rawText.trim()) {
+    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No schedule posted yet.</td></tr>`;
+    return;
   }
+
+  const lines = rawText.split("\n");
+  const employees = [];
+  const scheduleData = {};
+
+  const daysList = [
+    { key: "MON", label: "Mon" },
+    { key: "TUE", label: "Tue" },
+    { key: "WED", label: "Wed" },
+    { key: "THU", label: "Thur" },
+    { key: "FRI", label: "Fri" },
+    { key: "SAT", label: "Sat" }
+  ];
+
+  lines.forEach((line) => {
+    if (!line.trim() || !line.includes(":")) return;
+
+    const parts = line.split(":");
+    const empName = parts[0].trim();
+    const details = parts.slice(1).join(":").trim();
+
+    employees.push(empName);
+    scheduleData[empName] = {};
+
+    daysList.forEach(d => scheduleData[empName][d.key] = "");
+
+    const entries = details.split(",");
+    entries.forEach((entry) => {
+      const trimmed = entry.trim();
+      daysList.forEach((dayObj) => {
+        if (trimmed.toUpperCase().includes(dayObj.key)) {
+          let timeStr = trimmed.replace(new RegExp(dayObj.key, "gi"), "").replace(/THUR/gi, "").trim();
+          scheduleData[empName][dayObj.key] = timeStr || "Scheduled";
+        }
+      });
+    });
+  });
+
+  if (employees.length === 0) {
+    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Invalid schedule format. Use "Employee: Day Time" format.</td></tr>`;
+    return;
+  }
+
+  // Header columns
+  employees.forEach((emp) => {
+    const th = document.createElement("th");
+    th.textContent = emp;
+    rosterHeaderRow.appendChild(th);
+  });
+
+  // Day rows
+  daysList.forEach((dayObj) => {
+    const tr = document.createElement("tr");
+    let rowHTML = `<td>${dayObj.label}</td>`;
+
+    employees.forEach((emp) => {
+      const shiftTime = scheduleData[emp][dayObj.key];
+      if (shiftTime) {
+        rowHTML += `<td class="shift-cell">${shiftTime}</td>`;
+      } else {
+        rowHTML += `<td class="shift-empty"></td>`;
+      }
+    });
+
+    tr.innerHTML = rowHTML;
+    rosterTableBody.appendChild(tr);
+  });
 }
 
-// 11. Manager Schedule Publishing
+// 11. Manager Publish Handler
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
