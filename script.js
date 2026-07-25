@@ -50,7 +50,7 @@ logoutBtn.addEventListener("click", () => {
 // Check if Employee is currently clocked in
 async function checkActiveShift() {
   const { data, error } = await supabaseClient
-  .from("shift_logs") ...
+  .from("shift_logs") 
     .select("*")
     .eq("employee_id", currentEmployee)
     .is("clock_out", null)
@@ -76,7 +76,7 @@ toggleClockBtn.addEventListener("click", async () => {
   if (!activeShiftId) {
     // Clocking In
     const { data, error } = await supabaseClient
-  .from("shift_logs") ...
+  .from("shift_logs") 
       .insert([{ employee_id: currentEmployee, clock_in: now.toISOString() }])
       .select();
 
@@ -142,7 +142,7 @@ function updateClockUI(isClockedIn) {
 // Load logs from Database
 async function loadLogs() {
   const { data: logs, error } = await supabaseClient
-  .from("shift_logs") ...
+  .from("shift_logs") 
     .select("*")
     .eq("employee_id", currentEmployee)
     .not("clock_out", "is", null)
