@@ -34,7 +34,7 @@ setInterval(() => {
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// 3. Tab Switching
+// 3. Tab Navigation
 if (navClockin && navTimetable) {
   navClockin.addEventListener("click", () => switchTab("clockin"));
   navTimetable.addEventListener("click", () => switchTab("timetable"));
@@ -91,7 +91,7 @@ async function setupLoggedInUser(employee) {
 
 autoLogin();
 
-// 5. Login Handler
+// 5. Login Form Handler
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -148,7 +148,7 @@ async function checkActiveShift() {
   }
 }
 
-// 8. Clock In / Out Action Handler
+// 8. Clock In / Clock Out Action Handler
 if (toggleClockBtn) {
   toggleClockBtn.addEventListener("click", async () => {
     const now = new Date();
@@ -249,7 +249,7 @@ function renderLogs(logs) {
   });
 }
 
-// 10. Load Timetable with Employee Names on X-Axis (Top Row)
+// 10. Load & Render Timetable (Employees across Top Headers, Days Mon-Sat vertically)
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
@@ -277,8 +277,7 @@ async function loadWeeklyRoster() {
   if (rosterTitle) rosterTitle.textContent = roster.week_title;
   if (rosterUpdated) rosterUpdated.textContent = `Updated: ${new Date(roster.updated_at).toLocaleDateString()}`;
 
-  // Reset headers and body
-  rosterHeaderRow.innerHTML = "<th>Day</th>";
+  rosterHeaderRow.innerHTML = `<th class="day-col-head">Day</th>`;
   rosterTableBody.innerHTML = "";
 
   const rawText = roster.image_url || "";
@@ -300,7 +299,6 @@ async function loadWeeklyRoster() {
     { key: "SAT", label: "Sat" }
   ];
 
-  // 1. Extract Employee Names and Timing
   lines.forEach((line) => {
     if (!line.trim() || !line.includes(":")) return;
 
@@ -326,25 +324,23 @@ async function loadWeeklyRoster() {
   });
 
   if (employees.length === 0) {
-    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No employee schedules parsed.</td></tr>`;
+    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No employee schedules found.</td></tr>`;
     return;
   }
 
-  // 2. Build X-AXIS: Employee Names Across the Top Headers
+  // 1. Insert Employee Names into Header Row
   employees.forEach((emp) => {
     const th = document.createElement("th");
     th.textContent = emp;
     rosterHeaderRow.appendChild(th);
   });
 
-  // 3. Build Y-AXIS: Days Mon to Sat Down the Rows
+  // 2. Insert Day Rows and fill shift cells under each employee
   daysList.forEach((dayObj) => {
     const tr = document.createElement("tr");
 
-    // Left column: Day Name
     let rowHTML = `<td>${dayObj.label}</td>`;
 
-    // Map each employee's schedule under their respective top column
     employees.forEach((emp) => {
       const shiftTime = scheduleData[emp][dayObj.key];
       if (shiftTime) {
@@ -359,7 +355,7 @@ async function loadWeeklyRoster() {
   });
 }
 
-// 11. Manager Schedule Publishing Handler
+// 11. Manager Schedule Publishing
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
