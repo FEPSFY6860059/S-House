@@ -28,13 +28,13 @@ const navTimetable = document.getElementById("nav-timetable");
 const tabClockin = document.getElementById("tab-clockin");
 const tabTimetable = document.getElementById("tab-timetable");
 
-// 2. Live Clock
+// 2. Live Clock Update
 setInterval(() => {
   const now = new Date();
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// 3. Tab Switching
+// 3. Bottom Tab Switching
 if (navClockin && navTimetable) {
   navClockin.addEventListener("click", () => switchTab("clockin"));
   navTimetable.addEventListener("click", () => switchTab("timetable"));
@@ -91,7 +91,7 @@ async function setupLoggedInUser(employee) {
 
 autoLogin();
 
-// 5. Login
+// 5. Login Handler
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -115,7 +115,7 @@ if (loginForm) {
   });
 }
 
-// 6. Logout
+// 6. Logout Handler
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("clockin_employee_id");
@@ -130,7 +130,7 @@ if (logoutBtn) {
   });
 }
 
-// 7. Check Shift
+// 7. Check Active Shift
 async function checkActiveShift() {
   const { data } = await supabaseClient
     .from("shift_logs")
@@ -148,7 +148,7 @@ async function checkActiveShift() {
   }
 }
 
-// 8. Clock In / Out Toggle
+// 8. Clock In / Out Actions
 if (toggleClockBtn) {
   toggleClockBtn.addEventListener("click", async () => {
     const now = new Date();
@@ -249,7 +249,7 @@ function renderLogs(logs) {
   });
 }
 
-// 10. Load & Render Weekly Timetable
+// 10. Load & Parse Timetable Grid (Mon - Sat)
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
@@ -287,28 +287,60 @@ async function loadWeeklyRoster() {
       if (!line.trim()) return;
 
       let name = "Staff";
-      let scheduleText = line.trim();
+      let details = line.trim();
 
       if (line.includes(":")) {
         const parts = line.split(":");
         name = parts[0].trim();
-        scheduleText = parts.slice(1).join(":").trim();
+        details = parts.slice(1).join(":").trim();
       }
 
+      // Track shift slots for Mon-Sat
+      const daysOrder = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
+      const shifts = { MON: "-", TUE: "-", WED: "-", THU: "-", FRI: "-", SAT: "-" };
+
+      // Split entries separated by commas
+      const dayEntries = details.split(",");
+
+      dayEntries.forEach((entry) => {
+        const trimmedEntry = entry.trim();
+        daysOrder.forEach((dayKey) => {
+          if (trimmedEntry.toUpperCase().includes(dayKey)) {
+            let timeStr = trimmedEntry.replace(new RegExp(dayKey, "gi"), "").trim();
+            shifts[dayKey] = timeStr || "Scheduled";
+          }
+        });
+      });
+
+      const matchedAny = Object.values(shifts).some(val => val !== "-");
+
       const row = document.createElement("tr");
-      
-      row.innerHTML = `
-        <td style="font-weight:700; color:#0f172a; white-space:nowrap;">${name}</td>
-        <td colspan="6" style="color:#334155; font-weight:500;">${scheduleText}</td>
-      `;
+
+      if (matchedAny) {
+        row.innerHTML = `
+          <td>${name}</td>
+          <td class="${shifts.MON === '-' ? 'shift-off' : 'shift-cell'}">${shifts.MON}</td>
+          <td class="${shifts.TUE === '-' ? 'shift-off' : 'shift-cell'}">${shifts.TUE}</td>
+          <td class="${shifts.WED === '-' ? 'shift-off' : 'shift-cell'}">${shifts.WED}</td>
+          <td class="${shifts.THU === '-' ? 'shift-off' : 'shift-cell'}">${shifts.THU}</td>
+          <td class="${shifts.FRI === '-' ? 'shift-off' : 'shift-cell'}">${shifts.FRI}</td>
+          <td class="${shifts.SAT === '-' ? 'shift-off' : 'shift-cell'}">${shifts.SAT}</td>
+        `;
+      } else {
+        row.innerHTML = `
+          <td>${name}</td>
+          <td colspan="6" class="shift-cell">${details}</td>
+        `;
+      }
+
       rosterTableBody.appendChild(row);
     });
   } else {
-    rosterTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No schedule posted yet.</td></tr>`;
+    rosterTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No schedule details posted yet.</td></tr>`;
   }
 }
 
-// 11. Manager Publish
+// 11. Manager Schedule Publishing
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
