@@ -1,7 +1,7 @@
 // 1. Initialize Supabase Client
 const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentEmployee = null;
 let activeShiftId = null;
@@ -49,8 +49,8 @@ logoutBtn.addEventListener("click", () => {
 
 // Check if Employee is currently clocked in
 async function checkActiveShift() {
-  const { data, error } = await supabase
-    .from("shift_logs")
+  const { data, error } = await supabaseClient
+  .from("shift_logs") ...
     .select("*")
     .eq("employee_id", currentEmployee)
     .is("clock_out", null)
@@ -75,8 +75,8 @@ toggleClockBtn.addEventListener("click", async () => {
 
   if (!activeShiftId) {
     // Clocking In
-    const { data, error } = await supabase
-      .from("shift_logs")
+    const { data, error } = await supabaseClient
+  .from("shift_logs") ...
       .insert([{ employee_id: currentEmployee, clock_in: now.toISOString() }])
       .select();
 
@@ -92,7 +92,7 @@ toggleClockBtn.addEventListener("click", async () => {
     }
   } else {
     // Clocking Out
-    const { data: shift, error: fetchError } = await supabase
+    const { data: shift, error: fetchError } = await supabaseClient
       .from("shift_logs")
       .select("clock_in")
       .eq("id", activeShiftId)
@@ -106,7 +106,7 @@ toggleClockBtn.addEventListener("click", async () => {
     const clockInTime = new Date(shift.clock_in);
     const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClient
       .from("shift_logs")
       .update({
         clock_out: now.toISOString(),
@@ -141,8 +141,8 @@ function updateClockUI(isClockedIn) {
 
 // Load logs from Database
 async function loadLogs() {
-  const { data: logs, error } = await supabase
-    .from("shift_logs")
+  const { data: logs, error } = await supabaseClient
+  .from("shift_logs") ...
     .select("*")
     .eq("employee_id", currentEmployee)
     .not("clock_out", "is", null)
