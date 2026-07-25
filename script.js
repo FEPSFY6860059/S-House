@@ -4,6 +4,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentEmployee = null;
+let currentEmployeeName = "";
 let activeShiftId = null;
 
 // DOM Elements
@@ -24,23 +25,49 @@ setInterval(() => {
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// Login Handler
+// Login Handler with Employee Verification
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  currentEmployee = employeeIdInput.value.trim();
-  if (currentEmployee) {
-    welcomeMsg.textContent = `Employee: ${currentEmployee}`;
-    loginCard.classList.add("hidden");
-    dashboardCard.classList.remove("hidden");
-    
-    await checkActiveShift();
-    await loadLogs();
+  const enteredId = employeeIdInput.value.trim();
+
+  if (!enteredId) return;
+
+  // 1. Verify if employee exists in the employees table
+  const { data: employee, error } = await supabaseClient
+    .from("employees")
+    .select("*")
+    .eq("id", enteredId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Authorization error:", error.message);
+    alert("Error verifying Employee ID. Please try again.");
+    return;
   }
+
+  // 2. Reject if ID does not exist in database
+  if (!employee) {
+    alert("Unauthorized: Invalid Employee ID. Please contact your manager.");
+    employeeIdInput.value = "";
+    return;
+  }
+
+  // 3. Authorization successful
+  currentEmployee = employee.id;
+  currentEmployeeName = employee.name;
+
+  welcomeMsg.textContent = `Welcome, ${currentEmployeeName} (${currentEmployee})`;
+  loginCard.classList.add("hidden");
+  dashboardCard.classList.remove("hidden");
+
+  await checkActiveShift();
+  await loadLogs();
 });
 
 // Logout Handler
 logoutBtn.addEventListener("click", () => {
   currentEmployee = null;
+  currentEmployeeName = "";
   activeShiftId = null;
   dashboardCard.classList.add("hidden");
   loginCard.classList.remove("hidden");
@@ -73,8 +100,13 @@ async function checkActiveShift() {
 toggleClockBtn.addEventListener("click", async () => {
   const now = new Date();
 
+  // Prevent spam clicks during network request
+  toggleClockBtn.disabled = true;
+
   if (!activeShiftId) {
     // Clocking In
+    toggleClockBtn.textContent = "Clocking In...";
+
     const { data, error } = await supabaseClient
       .from("shift_logs")
       .insert([{ employee_id: currentEmployee, clock_in: now.toISOString() }])
@@ -82,7 +114,9 @@ toggleClockBtn.addEventListener("click", async () => {
 
     if (error) {
       console.error("Clock in failed:", error.message);
-      alert("Clock-in failed. Check browser console for details.");
+      alert("Clock-in failed. Please try again.");
+      toggleClockBtn.disabled = false;
+      updateClockUI(false);
       return;
     }
 
@@ -92,6 +126,8 @@ toggleClockBtn.addEventListener("click", async () => {
     }
   } else {
     // Clocking Out
+    toggleClockBtn.textContent = "Clocking Out...";
+
     const { data: shift, error: fetchError } = await supabaseClient
       .from("shift_logs")
       .select("clock_in")
@@ -100,6 +136,7 @@ toggleClockBtn.addEventListener("click", async () => {
 
     if (fetchError || !shift) {
       console.error("Error fetching shift start time:", fetchError?.message);
+      toggleClockBtn.disabled = false;
       return;
     }
 
@@ -116,7 +153,9 @@ toggleClockBtn.addEventListener("click", async () => {
 
     if (updateError) {
       console.error("Clock out failed:", updateError.message);
-      alert("Clock-out failed. Check browser console for details.");
+      alert("Clock-out failed. Please try again.");
+      toggleClockBtn.disabled = false;
+      updateClockUI(true);
       return;
     }
 
@@ -124,6 +163,8 @@ toggleClockBtn.addEventListener("click", async () => {
     updateClockUI(false);
     await loadLogs();
   }
+
+  toggleClockBtn.disabled = false;
 });
 
 // Update UI state based on clock status
@@ -158,20 +199,25 @@ async function loadLogs() {
   }
 }
 
+// Render formatted shift logs to table
 function renderLogs(logs) {
   logsBody.innerHTML = "";
+
+  if (logs.length === 0) {
+    logsBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No completed shifts found.</td></tr>`;
+    return;
+  }
 
   logs.forEach((log) => {
     const clockInDate = new Date(log.clock_in);
     const clockOutDate = log.clock_out ? new Date(log.clock_out) : null;
 
-    // Format readable dates/times
     const dateStr = clockInDate.toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
       year: "numeric"
     });
-    
+
     const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const timeOutStr = clockOutDate 
       ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
@@ -189,4 +235,3 @@ function renderLogs(logs) {
     logsBody.appendChild(row);
   });
 }
-
