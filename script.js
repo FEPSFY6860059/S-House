@@ -34,7 +34,7 @@ setInterval(() => {
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// 3. Tab Navigation Switching
+// 3. Tab Switching
 if (navClockin && navTimetable) {
   navClockin.addEventListener("click", () => switchTab("clockin"));
   navTimetable.addEventListener("click", () => switchTab("timetable"));
@@ -91,7 +91,7 @@ async function setupLoggedInUser(employee) {
 
 autoLogin();
 
-// 5. Login Form Handler
+// 5. Login Handler
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -148,7 +148,7 @@ async function checkActiveShift() {
   }
 }
 
-// 8. Clock In / Clock Out Action Handler
+// 8. Clock In / Out Action Handler
 if (toggleClockBtn) {
   toggleClockBtn.addEventListener("click", async () => {
     const now = new Date();
@@ -213,7 +213,7 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// 9. Load Employee Shift History Logs
+// 9. Load Logs
 async function loadLogs() {
   const { data: logs } = await supabaseClient
     .from("shift_logs")
@@ -249,7 +249,7 @@ function renderLogs(logs) {
   });
 }
 
-// 10. Load & Render Timetable (Days on Row Axis, Employees across Top Headers)
+// 10. Load Timetable with Employee Names on X-Axis (Top Row)
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
@@ -277,6 +277,7 @@ async function loadWeeklyRoster() {
   if (rosterTitle) rosterTitle.textContent = roster.week_title;
   if (rosterUpdated) rosterUpdated.textContent = `Updated: ${new Date(roster.updated_at).toLocaleDateString()}`;
 
+  // Reset headers and body
   rosterHeaderRow.innerHTML = "<th>Day</th>";
   rosterTableBody.innerHTML = "";
 
@@ -299,6 +300,7 @@ async function loadWeeklyRoster() {
     { key: "SAT", label: "Sat" }
   ];
 
+  // 1. Extract Employee Names and Timing
   lines.forEach((line) => {
     if (!line.trim() || !line.includes(":")) return;
 
@@ -324,22 +326,25 @@ async function loadWeeklyRoster() {
   });
 
   if (employees.length === 0) {
-    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Invalid schedule format. Use "Employee: Day Time" format.</td></tr>`;
+    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No employee schedules parsed.</td></tr>`;
     return;
   }
 
-  // Header columns
+  // 2. Build X-AXIS: Employee Names Across the Top Headers
   employees.forEach((emp) => {
     const th = document.createElement("th");
     th.textContent = emp;
     rosterHeaderRow.appendChild(th);
   });
 
-  // Day rows
+  // 3. Build Y-AXIS: Days Mon to Sat Down the Rows
   daysList.forEach((dayObj) => {
     const tr = document.createElement("tr");
+
+    // Left column: Day Name
     let rowHTML = `<td>${dayObj.label}</td>`;
 
+    // Map each employee's schedule under their respective top column
     employees.forEach((emp) => {
       const shiftTime = scheduleData[emp][dayObj.key];
       if (shiftTime) {
@@ -354,7 +359,7 @@ async function loadWeeklyRoster() {
   });
 }
 
-// 11. Manager Publish Handler
+// 11. Manager Schedule Publishing Handler
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
