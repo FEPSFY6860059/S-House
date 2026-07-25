@@ -25,7 +25,40 @@ setInterval(() => {
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// Login Handler: Check if Employee ID exists in the database
+// Auto-Login Check on Page Load
+async function autoLogin() {
+  const savedEmployeeId = localStorage.getItem("clockin_employee_id");
+
+  if (savedEmployeeId) {
+    // Check if the saved ID still exists in the database
+    const { data: employee, error } = await supabaseClient
+      .from("employees")
+      .select("*")
+      .eq("id", savedEmployeeId)
+      .maybeSingle();
+
+    if (employee && !error) {
+      currentEmployee = employee.id;
+      currentEmployeeName = employee.name;
+
+      welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
+      loginCard.classList.add("hidden");
+      dashboardCard.classList.remove("hidden");
+
+      await checkActiveShift();
+      await loadLogs();
+      await loadTotalHoursSummary();
+    } else {
+      // Clear storage if the employee ID was removed or is invalid
+      localStorage.removeItem("clockin_employee_id");
+    }
+  }
+}
+
+// Run Auto-Login Immediately
+autoLogin();
+
+// Login Handler
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const enteredId = employeeIdInput.value.trim();
@@ -52,9 +85,11 @@ loginForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  // 3. Login successful
+  // 3. Login successful & save ID to localStorage
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
+
+  localStorage.setItem("clockin_employee_id", currentEmployee);
 
   welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
   loginCard.classList.add("hidden");
@@ -67,9 +102,13 @@ loginForm.addEventListener("submit", async (e) => {
 
 // Logout Handler
 logoutBtn.addEventListener("click", () => {
+  // Clear saved ID from localStorage
+  localStorage.removeItem("clockin_employee_id");
+
   currentEmployee = null;
   currentEmployeeName = "";
   activeShiftId = null;
+
   dashboardCard.classList.add("hidden");
   loginCard.classList.remove("hidden");
   employeeIdInput.value = "";
@@ -101,7 +140,7 @@ async function checkActiveShift() {
 toggleClockBtn.addEventListener("click", async () => {
   const now = new Date();
 
-  // Prevent spamming button during API query
+  // Prevent double clicks
   toggleClockBtn.disabled = true;
 
   if (!activeShiftId) {
@@ -129,7 +168,6 @@ toggleClockBtn.addEventListener("click", async () => {
     // Action: CLOCK OUT
     toggleClockBtn.textContent = "Clocking Out...";
 
-    // Fetch shift start time to calculate hours
     const { data: shift, error: fetchError } = await supabaseClient
       .from("shift_logs")
       .select("clock_in")
@@ -145,7 +183,6 @@ toggleClockBtn.addEventListener("click", async () => {
     const clockInTime = new Date(shift.clock_in);
     const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
 
-    // Save clock_out time & total_hours
     const { error: updateError } = await supabaseClient
       .from("shift_logs")
       .update({
@@ -203,7 +240,7 @@ async function loadLogs() {
   }
 }
 
-// Fetch cumulative total hours worked from the view
+// Fetch cumulative total hours worked
 async function loadTotalHoursSummary() {
   const { data, error } = await supabaseClient
     .from("employee_hours_summary")
@@ -217,7 +254,7 @@ async function loadTotalHoursSummary() {
   }
 
   if (data) {
-    console.log(`Cumulative total hours for ${currentEmployeeName}: ${data.grand_total_hours} hrs (${data.total_shifts} shifts)`);
+    console.log(`Total hours logged for ${currentEmployeeName}: ${data.grand_total_hours} hrs across ${data.total_shifts} shift(s).`);
   }
 }
 
