@@ -160,17 +160,33 @@ async function loadLogs() {
 
 function renderLogs(logs) {
   logsBody.innerHTML = "";
+
   logs.forEach((log) => {
     const clockInDate = new Date(log.clock_in);
-    const clockOutDate = new Date(log.clock_out);
+    const clockOutDate = log.clock_out ? new Date(log.clock_out) : null;
+
+    // Format readable dates/times
+    const dateStr = clockInDate.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
     
+    const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeOutStr = clockOutDate 
+      ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+      : "Active";
+
+    const hours = log.total_hours ? `${Number(log.total_hours).toFixed(2)} hrs` : "--";
+
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${clockInDate.toLocaleDateString()}</td>
-      <td>${clockInDate.toLocaleTimeString()}</td>
-      <td>${clockOutDate.toLocaleTimeString()}</td>
-      <td>${log.total_hours} hrs</td>
+      <td>${dateStr}</td>
+      <td>${timeInStr}</td>
+      <td>${timeOutStr}</td>
+      <td>${hours}</td>
     `;
     logsBody.appendChild(row);
   });
 }
+
