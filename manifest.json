@@ -1,0 +1,15 @@
+{
+  "name": "Employee Clock-In Portal",
+  "short_name": "ClockIn",
+  "start_url": "/S-House/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
