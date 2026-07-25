@@ -1,4 +1,4 @@
-// 1. Initialize Supabase Client
+// Initialize Supabase Client
 const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -20,24 +20,48 @@ const toggleClockBtn = document.getElementById("toggle-clock-btn");
 const statusText = document.getElementById("status-text");
 const logsBody = document.getElementById("logs-body");
 
-// Live Clock Update
+// Navigation Tabs
+const navClockin = document.getElementById("nav-clockin");
+const navTimetable = document.getElementById("nav-timetable");
+const tabClockin = document.getElementById("tab-clockin");
+const tabTimetable = document.getElementById("tab-timetable");
+
+// Live Clock
 setInterval(() => {
   const now = new Date();
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// Auto-login on load if employee ID is saved in localStorage
+// Tab Navigation Handlers
+navClockin.addEventListener("click", () => switchTab("clockin"));
+navTimetable.addEventListener("click", () => switchTab("timetable"));
+
+function switchTab(tabName) {
+  if (tabName === "clockin") {
+    tabClockin.classList.remove("hidden");
+    tabTimetable.classList.add("hidden");
+    navClockin.classList.add("active");
+    navTimetable.classList.remove("active");
+  } else {
+    tabClockin.classList.add("hidden");
+    tabTimetable.classList.remove("hidden");
+    navClockin.classList.remove("active");
+    navTimetable.classList.add("active");
+  }
+}
+
+// Auto Login
 async function autoLogin() {
   const savedEmployeeId = localStorage.getItem("clockin_employee_id");
 
   if (savedEmployeeId) {
-    const { data: employee, error } = await supabaseClient
+    const { data: employee } = await supabaseClient
       .from("employees")
       .select("*")
       .eq("id", savedEmployeeId)
       .maybeSingle();
 
-    if (employee && !error) {
+    if (employee) {
       setupLoggedInUser(employee);
     } else {
       localStorage.removeItem("clockin_employee_id");
@@ -45,7 +69,6 @@ async function autoLogin() {
   }
 }
 
-// Helper to set up user state & dashboard
 async function setupLoggedInUser(employee) {
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
@@ -62,7 +85,6 @@ async function setupLoggedInUser(employee) {
   await loadWeeklyRoster();
 }
 
-// Run Auto-Login immediately
 autoLogin();
 
 // Login Submission
@@ -72,16 +94,11 @@ loginForm.addEventListener("submit", async (e) => {
 
   if (!enteredId) return;
 
-  const { data: employee, error } = await supabaseClient
+  const { data: employee } = await supabaseClient
     .from("employees")
     .select("*")
     .eq("id", enteredId)
     .maybeSingle();
-
-  if (error) {
-    alert("Error verifying ID. Please try again.");
-    return;
-  }
 
   if (!employee) {
     alert("Unauthorized: Invalid Employee ID.");
@@ -92,7 +109,7 @@ loginForm.addEventListener("submit", async (e) => {
   await setupLoggedInUser(employee);
 });
 
-// Logout Action
+// Logout
 logoutBtn.addEventListener("click", () => {
   localStorage.removeItem("clockin_employee_id");
   currentEmployee = null;
@@ -105,9 +122,9 @@ logoutBtn.addEventListener("click", () => {
   employeeIdInput.value = "";
 });
 
-// Check if user is currently clocked in
+// Active Shift Check
 async function checkActiveShift() {
-  const { data, error } = await supabaseClient
+  const { data } = await supabaseClient
     .from("shift_logs")
     .select("*")
     .eq("employee_id", currentEmployee)
@@ -123,33 +140,24 @@ async function checkActiveShift() {
   }
 }
 
-// Clock In / Clock Out Click Handler
+// Clock In / Clock Out
 toggleClockBtn.addEventListener("click", async () => {
   const now = new Date();
   toggleClockBtn.disabled = true;
 
   if (!activeShiftId) {
-    // Clock In
     toggleClockBtn.textContent = "Clocking In...";
 
-    const { data, error } = await supabaseClient
+    const { data } = await supabaseClient
       .from("shift_logs")
       .insert([{ employee_id: currentEmployee, clock_in: now.toISOString() }])
       .select();
-
-    if (error) {
-      alert("Clock-in failed.");
-      toggleClockBtn.disabled = false;
-      updateClockUI(false);
-      return;
-    }
 
     if (data && data.length > 0) {
       activeShiftId = data[0].id;
       updateClockUI(true);
     }
   } else {
-    // Clock Out
     toggleClockBtn.textContent = "Clocking Out...";
 
     const { data: shift } = await supabaseClient
@@ -188,7 +196,7 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// Load Shift Logs
+// Load Logs
 async function loadLogs() {
   const { data: logs } = await supabaseClient
     .from("shift_logs")
@@ -212,7 +220,7 @@ function renderLogs(logs) {
     const clockInDate = new Date(log.clock_in);
     const clockOutDate = log.clock_out ? new Date(log.clock_out) : null;
 
-    const dateStr = clockInDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    const dateStr = clockInDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const timeOutStr = clockOutDate ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Active";
     const hours = log.total_hours ? `${Number(log.total_hours).toFixed(2)} hrs` : "--";
@@ -223,14 +231,13 @@ function renderLogs(logs) {
   });
 }
 
-// Load and Render Weekly Roster
+// Load Weekly Roster
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
   const rosterUpdated = document.getElementById("roster-updated");
   const rosterContent = document.getElementById("roster-content");
 
-  // Show Manager Box if Manager
   if (adminBox) {
     if (isManager) {
       adminBox.classList.remove("hidden");
@@ -260,7 +267,7 @@ async function loadWeeklyRoster() {
   }
 }
 
-// Publish Button Handler for Managers
+// Publish Schedule
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
@@ -268,7 +275,7 @@ if (publishBtn) {
     const content = document.getElementById("admin-content-input").value.trim();
 
     if (!title || !content) {
-      alert("Please fill in both the title and schedule details.");
+      alert("Please fill in both title and details.");
       return;
     }
 
@@ -279,10 +286,8 @@ if (publishBtn) {
       .from("weekly_roster")
       .insert([{ week_title: title, image_url: content }]);
 
-    if (error) {
-      alert("Failed to publish schedule: " + error.message);
-    } else {
-      alert("Weekly schedule published successfully!");
+    if (!error) {
+      alert("Weekly schedule published!");
       document.getElementById("admin-title-input").value = "";
       document.getElementById("admin-content-input").value = "";
       await loadWeeklyRoster();
