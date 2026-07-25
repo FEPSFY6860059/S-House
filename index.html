@@ -50,7 +50,6 @@
           </table>
         </div>
       </main>
-
 <main id="tab-timetable" class="tab-content hidden">
         <div class="card schedule-card">
           <h3 id="roster-title">Weekly Schedule</h3>
@@ -59,15 +58,9 @@
           <div class="table-container">
             <table id="roster-table">
               <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Mon</th>
-                  <th>Tue</th>
-                  <th>Wed</th>
-                  <th>Thu</th>
-                  <th>Fri</th>
-                  <th>Sat</th>
-                </tr>
+                <tr id="roster-header-row">
+                  <th>Day</th>
+                  </tr>
               </thead>
               <tbody id="roster-table-body">
                 </tbody>
@@ -78,16 +71,15 @@
             <h4>Manager Tool: Update Schedule</h4>
             
             <label>Week Title</label>
-            <input type="text" id="admin-title-input" placeholder="e.g. July 27 - Aug 2" />
+            <input type="text" id="admin-title-input" placeholder="e.g. Schedule: July 27 - Aug 2" />
 
-            <label>Schedule Input (One employee per line)</label>
-            <textarea id="admin-content-input" rows="6" placeholder="Bella: Mon 8:30 - 3:30, Tue 8:30 - 3:30, Wed OFF&#10;Melissa: Mon 9:00 - 3:30, Fri 8:30 - 3:30&#10;Jacob: Mon-Sat 8:30 - 3:30"></textarea>
+            <label>Schedule Details (One employee per line)</label>
+            <textarea id="admin-content-input" rows="6" placeholder="Emma: Mon 8:30 - 3:30, Wed 8:30 - 3:30&#10;Kelly: Tue 8:30 - 3:30, Thu 8:30 - 3:30&#10;Melissa: Fri 8:30 - 3:30, Sat 8:30 - 3:30"></textarea>
 
             <button id="publish-roster-btn" class="btn btn-dark">Publish Schedule</button>
           </div>
         </div>
       </main>
-      
       <nav class="bottom-nav">
         <button id="nav-clockin" class="nav-btn active">
           <span class="nav-icon">⏰</span>
