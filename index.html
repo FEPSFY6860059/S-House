@@ -60,8 +60,13 @@
             <table id="roster-table">
               <thead>
                 <tr>
-                  <th>Day</th>
-                  <th>Shift / Staff Scheduled</th>
+                  <th>Employee</th>
+                  <th>Mon</th>
+                  <th>Tue</th>
+                  <th>Wed</th>
+                  <th>Thu</th>
+                  <th>Fri</th>
+                  <th>Sat</th>
                 </tr>
               </thead>
               <tbody id="roster-table-body">
@@ -73,10 +78,10 @@
             <h4>Manager Tool: Update Schedule</h4>
             
             <label>Week Title</label>
-            <input type="text" id="admin-title-input" placeholder="e.g. Schedule: July 27 - Aug 2" />
+            <input type="text" id="admin-title-input" placeholder="e.g. Schedule: Week of July 27" />
 
-            <label>Schedule Details (One day per line, e.g., Mon: Melissa 9-5)</label>
-            <textarea id="admin-content-input" rows="7" placeholder="Mon: Melissa & Bella (9am-5pm)&#10;Tue: Kelly & Henry (12pm-8pm)&#10;Wed: Jacob (9am-5pm)&#10;Thu: OFF&#10;Fri: Melissa (9am-5pm)&#10;Sat: Bella (10am-4pm)&#10;Sun: OFF"></textarea>
+            <label>Schedule Details (One employee per line)</label>
+            <textarea id="admin-content-input" rows="6" placeholder="Melissa: Mon-Wed 8:30am - 3:30pm&#10;Kelly: Tue-Fri 9:00am - 2:00pm&#10;Jacob: Mon, Wed, Fri 10:00am - 3:30pm, Sat 8:30am - 1:00pm"></textarea>
 
             <button id="publish-roster-btn" class="btn btn-dark">Publish Schedule</button>
           </div>
