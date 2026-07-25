@@ -51,12 +51,23 @@
         </div>
       </main>
 
-      <main id="tab-timetable" class="tab-content hidden">
+<main id="tab-timetable" class="tab-content hidden">
         <div class="card schedule-card">
           <h3 id="roster-title">Weekly Schedule</h3>
           <p id="roster-updated" class="subtext">Loading schedule...</p>
 
-          <div id="roster-content"></div>
+          <div class="table-container">
+            <table id="roster-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th>Shift / Staff Scheduled</th>
+                </tr>
+              </thead>
+              <tbody id="roster-table-body">
+                </tbody>
+            </table>
+          </div>
 
           <div id="admin-schedule-box" class="admin-box hidden">
             <h4>Manager Tool: Update Schedule</h4>
@@ -64,8 +75,8 @@
             <label>Week Title</label>
             <input type="text" id="admin-title-input" placeholder="e.g. Schedule: July 27 - Aug 2" />
 
-            <label>Schedule Text OR Image Link</label>
-            <textarea id="admin-content-input" rows="4" placeholder="Type text schedule OR paste image URL here..."></textarea>
+            <label>Schedule Details (One day per line, e.g., Mon: Melissa 9-5)</label>
+            <textarea id="admin-content-input" rows="7" placeholder="Mon: Melissa & Bella (9am-5pm)&#10;Tue: Kelly & Henry (12pm-8pm)&#10;Wed: Jacob (9am-5pm)&#10;Thu: OFF&#10;Fri: Melissa (9am-5pm)&#10;Sat: Bella (10am-4pm)&#10;Sun: OFF"></textarea>
 
             <button id="publish-roster-btn" class="btn btn-dark">Publish Schedule</button>
           </div>
