@@ -2,15 +2,15 @@
   --primary: #10b981;
   --primary-hover: #059669;
   --danger: #ef4444;
-  --bg-dark: #0f172a;
+  --bg-dark: #0b132b;
   --card-bg: #ffffff;
-  --text-dark: #1e293b;
+  --text-dark: #0f172a;
   --text-muted: #64748b;
   --border: #e2e8f0;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-dark);
   margin: 0;
   padding: 0;
@@ -21,9 +21,9 @@ body {
 
 .app-container {
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   min-height: 100vh;
-  padding-bottom: 80px; /* Space for bottom navigation */
+  padding-bottom: 80px;
   box-sizing: border-box;
 }
 
@@ -31,13 +31,33 @@ body {
   display: none !important;
 }
 
-/* Cards */
-.card {
-  background: var(--card-bg);
-  border-radius: 16px;
-  padding: 20px;
-  margin: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* Brand Logo Styling */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #10b981, #0284c7);
+  color: #ffffff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.logo-text {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text-dark);
 }
 
 /* Header */
@@ -47,17 +67,54 @@ body {
   align-items: center;
   padding: 16px 20px;
   color: #ffffff;
-  font-weight: 600;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-logo-icon {
+  background: #10b981;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.header-title {
+  font-weight: 700;
   font-size: 18px;
 }
 
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
 .btn-logout {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 6px 12px;
   border-radius: 8px;
   cursor: pointer;
+  font-size: 12px;
+}
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 24px;
+  margin: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
 }
 
 /* Clock Display */
@@ -66,10 +123,11 @@ body {
 }
 
 #live-clock {
-  font-size: 38px;
-  font-weight: 700;
-  margin: 10px 0;
+  font-size: 42px;
+  font-weight: 800;
+  margin: 12px 0;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
 }
 
 .btn {
@@ -78,10 +136,15 @@ body {
   background-color: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn:active {
+  opacity: 0.9;
 }
 
 .btn-clock.clocked-in {
@@ -92,11 +155,11 @@ body {
   background-color: #0f172a;
 }
 
-/* Vertical Days Timetable Styles */
+/* Multi-Column Timetable Table */
 .table-container {
   overflow-x: auto;
-  margin: 14px 0;
-  border-radius: 10px;
+  margin: 16px 0;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: #ffffff;
 }
@@ -106,34 +169,42 @@ body {
   border-collapse: collapse;
   font-size: 13px;
   text-align: center;
-  min-width: 320px;
+  table-layout: auto;
 }
 
 #roster-table th {
   background-color: #f8fafc;
   color: #0f172a;
   font-weight: 700;
-  padding: 10px 12px;
+  padding: 12px;
   border-bottom: 2px solid var(--border);
   border-right: 1px solid var(--border);
   white-space: nowrap;
+  min-width: 100px;
+}
+
+#roster-table th.day-col-head {
+  min-width: 70px;
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
 
 #roster-table td {
-  padding: 10px 12px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
   border-right: 1px solid #f1f5f9;
   vertical-align: middle;
-  font-size: 13px;
   white-space: nowrap;
+  font-size: 13px;
 }
 
-/* Day Axis (Leftmost sticky column) */
+/* Day Column Sticky on Scroll */
 #roster-table td:first-child {
   font-weight: 700;
   color: #0f172a;
   text-align: left;
-  padding-left: 12px;
   background-color: #f8fafc;
   border-right: 2px solid var(--border);
   position: sticky;
@@ -150,11 +221,11 @@ body {
   color: #cbd5e1;
 }
 
-/* Admin / Manager Section */
+/* Admin Box */
 .subtext {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  margin-top: -8px;
+  margin-top: -6px;
 }
 
 .admin-box {
@@ -165,36 +236,39 @@ body {
 
 .admin-box label {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   display: block;
-  margin: 8px 0 4px;
+  margin: 10px 0 4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 input[type="text"], textarea {
   width: 100%;
-  padding: 10px;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   box-sizing: border-box;
   font-family: inherit;
+  font-size: 13px;
   margin-bottom: 8px;
 }
 
-/* Bottom Dashboard Navigation Bar */
+/* Navigation Bar */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   height: 65px;
   background: #ffffff;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .nav-btn {
