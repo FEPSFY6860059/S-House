@@ -5,6 +5,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentEmployee = null;
 let currentEmployeeName = "";
+let isManager = false;
 let activeShiftId = null;
 
 // DOM Elements
@@ -19,18 +20,17 @@ const toggleClockBtn = document.getElementById("toggle-clock-btn");
 const statusText = document.getElementById("status-text");
 const logsBody = document.getElementById("logs-body");
 
-// Update Live Clock Every Second
+// Live Clock Update
 setInterval(() => {
   const now = new Date();
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// Auto-Login Check on Page Load
+// Auto-login on load if employee ID is saved in localStorage
 async function autoLogin() {
   const savedEmployeeId = localStorage.getItem("clockin_employee_id");
 
   if (savedEmployeeId) {
-    // Check if the saved ID still exists in the database
     const { data: employee, error } = await supabaseClient
       .from("employees")
       .select("*")
@@ -38,56 +38,18 @@ async function autoLogin() {
       .maybeSingle();
 
     if (employee && !error) {
-      currentEmployee = employee.id;
-      currentEmployeeName = employee.name;
-
-      welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
-      loginCard.classList.add("hidden");
-      dashboardCard.classList.remove("hidden");
-
-      await checkActiveShift();
-      await loadLogs();
-      await loadTotalHoursSummary();
+      setupLoggedInUser(employee);
     } else {
-      // Clear storage if the employee ID was removed or is invalid
       localStorage.removeItem("clockin_employee_id");
     }
   }
 }
 
-// Run Auto-Login Immediately
-autoLogin();
-
-// Login Handler
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const enteredId = employeeIdInput.value.trim();
-
-  if (!enteredId) return;
-
-  // 1. Verify if employee exists in the 'employees' table
-  const { data: employee, error } = await supabaseClient
-    .from("employees")
-    .select("*")
-    .eq("id", enteredId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Authorization check error:", error.message);
-    alert("Error checking Employee ID. Please try again.");
-    return;
-  }
-
-  // 2. Reject login if ID is invalid
-  if (!employee) {
-    alert("Unauthorized: Invalid Employee ID. Please contact your manager.");
-    employeeIdInput.value = "";
-    return;
-  }
-
-  // 3. Login successful & save ID to localStorage
+// Helper to set up user state & dashboard
+async function setupLoggedInUser(employee) {
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
+  isManager = (employee.role === "manager");
 
   localStorage.setItem("clockin_employee_id", currentEmployee);
 
@@ -97,16 +59,45 @@ loginForm.addEventListener("submit", async (e) => {
 
   await checkActiveShift();
   await loadLogs();
-  await loadTotalHoursSummary();
+  await loadWeeklyRoster();
+}
+
+// Run Auto-Login immediately
+autoLogin();
+
+// Login Submission
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const enteredId = employeeIdInput.value.trim();
+
+  if (!enteredId) return;
+
+  const { data: employee, error } = await supabaseClient
+    .from("employees")
+    .select("*")
+    .eq("id", enteredId)
+    .maybeSingle();
+
+  if (error) {
+    alert("Error verifying ID. Please try again.");
+    return;
+  }
+
+  if (!employee) {
+    alert("Unauthorized: Invalid Employee ID.");
+    employeeIdInput.value = "";
+    return;
+  }
+
+  await setupLoggedInUser(employee);
 });
 
-// Logout Handler
+// Logout Action
 logoutBtn.addEventListener("click", () => {
-  // Clear saved ID from localStorage
   localStorage.removeItem("clockin_employee_id");
-
   currentEmployee = null;
   currentEmployeeName = "";
+  isManager = false;
   activeShiftId = null;
 
   dashboardCard.classList.add("hidden");
@@ -114,7 +105,7 @@ logoutBtn.addEventListener("click", () => {
   employeeIdInput.value = "";
 });
 
-// Check if Employee has an ongoing shift (clock_out IS NULL)
+// Check if user is currently clocked in
 async function checkActiveShift() {
   const { data, error } = await supabaseClient
     .from("shift_logs")
@@ -122,10 +113,6 @@ async function checkActiveShift() {
     .eq("employee_id", currentEmployee)
     .is("clock_out", null)
     .maybeSingle();
-
-  if (error) {
-    console.error("Error checking active shift:", error.message);
-  }
 
   if (data) {
     activeShiftId = data.id;
@@ -136,15 +123,13 @@ async function checkActiveShift() {
   }
 }
 
-// Clock In / Clock Out Action Handler
+// Clock In / Clock Out Click Handler
 toggleClockBtn.addEventListener("click", async () => {
   const now = new Date();
-
-  // Prevent double clicks
   toggleClockBtn.disabled = true;
 
   if (!activeShiftId) {
-    // Action: CLOCK IN
+    // Clock In
     toggleClockBtn.textContent = "Clocking In...";
 
     const { data, error } = await supabaseClient
@@ -153,8 +138,7 @@ toggleClockBtn.addEventListener("click", async () => {
       .select();
 
     if (error) {
-      console.error("Clock in failed:", error.message);
-      alert("Clock-in failed. Please check browser console.");
+      alert("Clock-in failed.");
       toggleClockBtn.disabled = false;
       updateClockUI(false);
       return;
@@ -165,50 +149,33 @@ toggleClockBtn.addEventListener("click", async () => {
       updateClockUI(true);
     }
   } else {
-    // Action: CLOCK OUT
+    // Clock Out
     toggleClockBtn.textContent = "Clocking Out...";
 
-    const { data: shift, error: fetchError } = await supabaseClient
+    const { data: shift } = await supabaseClient
       .from("shift_logs")
       .select("clock_in")
       .eq("id", activeShiftId)
       .maybeSingle();
 
-    if (fetchError || !shift) {
-      console.error("Error fetching shift info:", fetchError?.message);
-      toggleClockBtn.disabled = false;
-      return;
-    }
+    if (shift) {
+      const clockInTime = new Date(shift.clock_in);
+      const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
 
-    const clockInTime = new Date(shift.clock_in);
-    const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
-
-    const { error: updateError } = await supabaseClient
-      .from("shift_logs")
-      .update({
-        clock_out: now.toISOString(),
-        total_hours: hoursWorked
-      })
-      .eq("id", activeShiftId);
-
-    if (updateError) {
-      console.error("Clock out failed:", updateError.message);
-      alert("Clock-out failed. Please try again.");
-      toggleClockBtn.disabled = false;
-      updateClockUI(true);
-      return;
+      await supabaseClient
+        .from("shift_logs")
+        .update({ clock_out: now.toISOString(), total_hours: hoursWorked })
+        .eq("id", activeShiftId);
     }
 
     activeShiftId = null;
     updateClockUI(false);
     await loadLogs();
-    await loadTotalHoursSummary();
   }
 
   toggleClockBtn.disabled = false;
 });
 
-// Update UI depending on shift status
 function updateClockUI(isClockedIn) {
   if (isClockedIn) {
     statusText.innerHTML = "Status: <strong>Clocked In</strong>";
@@ -221,44 +188,18 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// Load completed shifts for current employee
+// Load Shift Logs
 async function loadLogs() {
-  const { data: logs, error } = await supabaseClient
+  const { data: logs } = await supabaseClient
     .from("shift_logs")
     .select("*")
     .eq("employee_id", currentEmployee)
     .not("clock_out", "is", null)
     .order("clock_in", { ascending: false });
 
-  if (error) {
-    console.error("Error loading logs:", error.message);
-    return;
-  }
-
-  if (logs) {
-    renderLogs(logs);
-  }
+  renderLogs(logs || []);
 }
 
-// Fetch cumulative total hours worked
-async function loadTotalHoursSummary() {
-  const { data, error } = await supabaseClient
-    .from("employee_hours_summary")
-    .select("grand_total_hours, total_shifts")
-    .eq("employee_id", currentEmployee)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Error loading total hours:", error.message);
-    return;
-  }
-
-  if (data) {
-    console.log(`Total hours logged for ${currentEmployeeName}: ${data.grand_total_hours} hrs across ${data.total_shifts} shift(s).`);
-  }
-}
-
-// Render formatted shift logs to HTML table
 function renderLogs(logs) {
   logsBody.innerHTML = "";
 
@@ -271,26 +212,83 @@ function renderLogs(logs) {
     const clockInDate = new Date(log.clock_in);
     const clockOutDate = log.clock_out ? new Date(log.clock_out) : null;
 
-    const dateStr = clockInDate.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    });
-
+    const dateStr = clockInDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const timeOutStr = clockOutDate 
-      ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-      : "Active";
-
+    const timeOutStr = clockOutDate ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Active";
     const hours = log.total_hours ? `${Number(log.total_hours).toFixed(2)} hrs` : "--";
 
     const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${dateStr}</td>
-      <td>${timeInStr}</td>
-      <td>${timeOutStr}</td>
-      <td>${hours}</td>
-    `;
+    row.innerHTML = `<td>${dateStr}</td><td>${timeInStr}</td><td>${timeOutStr}</td><td>${hours}</td>`;
     logsBody.appendChild(row);
+  });
+}
+
+// Load and Render Weekly Roster
+async function loadWeeklyRoster() {
+  const adminBox = document.getElementById("admin-schedule-box");
+  const rosterTitle = document.getElementById("roster-title");
+  const rosterUpdated = document.getElementById("roster-updated");
+  const rosterContent = document.getElementById("roster-content");
+
+  // Show Manager Box if Manager
+  if (adminBox) {
+    if (isManager) {
+      adminBox.classList.remove("hidden");
+    } else {
+      adminBox.classList.add("hidden");
+    }
+  }
+
+  const { data: roster } = await supabaseClient
+    .from("weekly_roster")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!roster) return;
+
+  if (rosterTitle) rosterTitle.textContent = roster.week_title;
+  if (rosterUpdated) rosterUpdated.textContent = `Updated: ${new Date(roster.updated_at).toLocaleDateString()}`;
+
+  if (rosterContent) {
+    if (roster.image_url && roster.image_url.startsWith("http")) {
+      rosterContent.innerHTML = `<img src="${roster.image_url}" style="width:100%; border-radius:8px;" />`;
+    } else {
+      rosterContent.innerHTML = `<p style="white-space: pre-wrap; font-weight: 500; background: #f8fafc; padding: 12px; border-radius: 8px; margin: 0; color: #1e293b;">${roster.image_url || "No schedule details posted."}</p>`;
+    }
+  }
+}
+
+// Publish Button Handler for Managers
+const publishBtn = document.getElementById("publish-roster-btn");
+if (publishBtn) {
+  publishBtn.addEventListener("click", async () => {
+    const title = document.getElementById("admin-title-input").value.trim();
+    const content = document.getElementById("admin-content-input").value.trim();
+
+    if (!title || !content) {
+      alert("Please fill in both the title and schedule details.");
+      return;
+    }
+
+    publishBtn.disabled = true;
+    publishBtn.textContent = "Publishing...";
+
+    const { error } = await supabaseClient
+      .from("weekly_roster")
+      .insert([{ week_title: title, image_url: content }]);
+
+    if (error) {
+      alert("Failed to publish schedule: " + error.message);
+    } else {
+      alert("Weekly schedule published successfully!");
+      document.getElementById("admin-title-input").value = "";
+      document.getElementById("admin-content-input").value = "";
+      await loadWeeklyRoster();
+    }
+
+    publishBtn.disabled = false;
+    publishBtn.textContent = "Publish Schedule";
   });
 }
