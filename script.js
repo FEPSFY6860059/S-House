@@ -19,20 +19,20 @@ const toggleClockBtn = document.getElementById("toggle-clock-btn");
 const statusText = document.getElementById("status-text");
 const logsBody = document.getElementById("logs-body");
 
-// Update Live Clock
+// Update Live Clock Every Second
 setInterval(() => {
   const now = new Date();
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// Login Handler with Employee Verification
+// Login Handler: Check if Employee ID exists in the database
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const enteredId = employeeIdInput.value.trim();
 
   if (!enteredId) return;
 
-  // 1. Verify if employee exists in the employees table
+  // 1. Verify if employee exists in the 'employees' table
   const { data: employee, error } = await supabaseClient
     .from("employees")
     .select("*")
@@ -40,28 +40,29 @@ loginForm.addEventListener("submit", async (e) => {
     .maybeSingle();
 
   if (error) {
-    console.error("Authorization error:", error.message);
-    alert("Error verifying Employee ID. Please try again.");
+    console.error("Authorization check error:", error.message);
+    alert("Error checking Employee ID. Please try again.");
     return;
   }
 
-  // 2. Reject if ID does not exist in database
+  // 2. Reject login if ID is invalid
   if (!employee) {
     alert("Unauthorized: Invalid Employee ID. Please contact your manager.");
     employeeIdInput.value = "";
     return;
   }
 
-  // 3. Authorization successful
+  // 3. Login successful
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
 
-  welcomeMsg.textContent = `Welcome, ${currentEmployeeName} (${currentEmployee})`;
+  welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
   loginCard.classList.add("hidden");
   dashboardCard.classList.remove("hidden");
 
   await checkActiveShift();
   await loadLogs();
+  await loadTotalHoursSummary();
 });
 
 // Logout Handler
@@ -74,7 +75,7 @@ logoutBtn.addEventListener("click", () => {
   employeeIdInput.value = "";
 });
 
-// Check if Employee is currently clocked in
+// Check if Employee has an ongoing shift (clock_out IS NULL)
 async function checkActiveShift() {
   const { data, error } = await supabaseClient
     .from("shift_logs")
@@ -96,15 +97,15 @@ async function checkActiveShift() {
   }
 }
 
-// Clock In / Clock Out Action
+// Clock In / Clock Out Action Handler
 toggleClockBtn.addEventListener("click", async () => {
   const now = new Date();
 
-  // Prevent spam clicks during network request
+  // Prevent spamming button during API query
   toggleClockBtn.disabled = true;
 
   if (!activeShiftId) {
-    // Clocking In
+    // Action: CLOCK IN
     toggleClockBtn.textContent = "Clocking In...";
 
     const { data, error } = await supabaseClient
@@ -114,7 +115,7 @@ toggleClockBtn.addEventListener("click", async () => {
 
     if (error) {
       console.error("Clock in failed:", error.message);
-      alert("Clock-in failed. Please try again.");
+      alert("Clock-in failed. Please check browser console.");
       toggleClockBtn.disabled = false;
       updateClockUI(false);
       return;
@@ -125,9 +126,10 @@ toggleClockBtn.addEventListener("click", async () => {
       updateClockUI(true);
     }
   } else {
-    // Clocking Out
+    // Action: CLOCK OUT
     toggleClockBtn.textContent = "Clocking Out...";
 
+    // Fetch shift start time to calculate hours
     const { data: shift, error: fetchError } = await supabaseClient
       .from("shift_logs")
       .select("clock_in")
@@ -135,7 +137,7 @@ toggleClockBtn.addEventListener("click", async () => {
       .maybeSingle();
 
     if (fetchError || !shift) {
-      console.error("Error fetching shift start time:", fetchError?.message);
+      console.error("Error fetching shift info:", fetchError?.message);
       toggleClockBtn.disabled = false;
       return;
     }
@@ -143,6 +145,7 @@ toggleClockBtn.addEventListener("click", async () => {
     const clockInTime = new Date(shift.clock_in);
     const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
 
+    // Save clock_out time & total_hours
     const { error: updateError } = await supabaseClient
       .from("shift_logs")
       .update({
@@ -162,12 +165,13 @@ toggleClockBtn.addEventListener("click", async () => {
     activeShiftId = null;
     updateClockUI(false);
     await loadLogs();
+    await loadTotalHoursSummary();
   }
 
   toggleClockBtn.disabled = false;
 });
 
-// Update UI state based on clock status
+// Update UI depending on shift status
 function updateClockUI(isClockedIn) {
   if (isClockedIn) {
     statusText.innerHTML = "Status: <strong>Clocked In</strong>";
@@ -180,7 +184,7 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// Load logs from Database
+// Load completed shifts for current employee
 async function loadLogs() {
   const { data: logs, error } = await supabaseClient
     .from("shift_logs")
@@ -199,12 +203,30 @@ async function loadLogs() {
   }
 }
 
-// Render formatted shift logs to table
+// Fetch cumulative total hours worked from the view
+async function loadTotalHoursSummary() {
+  const { data, error } = await supabaseClient
+    .from("employee_hours_summary")
+    .select("grand_total_hours, total_shifts")
+    .eq("employee_id", currentEmployee)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error loading total hours:", error.message);
+    return;
+  }
+
+  if (data) {
+    console.log(`Cumulative total hours for ${currentEmployeeName}: ${data.grand_total_hours} hrs (${data.total_shifts} shifts)`);
+  }
+}
+
+// Render formatted shift logs to HTML table
 function renderLogs(logs) {
   logsBody.innerHTML = "";
 
   if (logs.length === 0) {
-    logsBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No completed shifts found.</td></tr>`;
+    logsBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No completed shifts logged yet.</td></tr>`;
     return;
   }
 
