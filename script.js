@@ -1,6 +1,6 @@
 // 1. Initialize Supabase Client
 const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
-const SUPABASE_KEY = "sb_publishable_0lPIUz7-OwJOcvTzrMa09g_-S99H_Su";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentEmployee = null;
