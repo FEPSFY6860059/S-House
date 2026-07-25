@@ -21,9 +21,9 @@ body {
 
 .app-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   min-height: 100vh;
-  padding-bottom: 80px; /* Space for fixed bottom bar */
+  padding-bottom: 80px; /* Space for bottom tab bar */
   box-sizing: border-box;
 }
 
@@ -60,7 +60,7 @@ body {
   cursor: pointer;
 }
 
-/* Clock Card */
+/* Clock Display */
 .clock-card {
   text-align: center;
 }
@@ -92,7 +92,7 @@ body {
   background-color: #0f172a;
 }
 
-/* Logs Table */
+/* General Tables */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -100,19 +100,58 @@ table {
   font-size: 14px;
 }
 
-th, td {
-  padding: 10px 6px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
+/* Timetable Grid Styles */
+.table-container {
+  overflow-x: auto;
+  margin: 14px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
 }
 
-th {
-  color: var(--text-muted);
+#roster-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 12px;
+  text-align: center;
+}
+
+#roster-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 10px 4px;
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
   text-transform: uppercase;
 }
 
-/* Timetable & Admin Panel */
+#roster-table td {
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+#roster-table td:first-child {
+  font-weight: 700;
+  color: #0f172a;
+  text-align: left;
+  padding-left: 8px;
+  background-color: #f8fafc;
+  white-space: nowrap;
+}
+
+.shift-cell {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.shift-off {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+/* Timetable & Admin Section */
 .subtext {
   font-size: 12px;
   color: var(--text-muted);
@@ -141,59 +180,7 @@ input[type="text"], textarea {
   font-family: inherit;
   margin-bottom: 8px;
 }
-/* Timetable Grid Styles */
-.table-container {
-  overflow-x: auto;
-  margin: 14px 0;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
 
-#roster-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0;
-  font-size: 14px;
-}
-
-#roster-table th {
-  background-color: #f8fafc;
-  color: var(--text-dark);
-  font-weight: 700;
-  padding: 12px;
-  border-bottom: 2px solid var(--border);
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-}
-
-#roster-table td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-#roster-table tr:last-child td {
-  border-bottom: none;
-}
-
-.day-axis {
-  font-weight: 700;
-  color: #0f172a;
-  background-color: #f1f5f9;
-  width: 30%;
-  white-space: nowrap;
-}
-
-.shift-info {
-  color: #334155;
-  font-weight: 500;
-}
-
-.shift-off {
-  color: #94a3b8;
-  font-style: italic;
-}
 /* Fixed Bottom Dashboard Navigation */
 .bottom-nav {
   position: fixed;
@@ -201,7 +188,7 @@ input[type="text"], textarea {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   height: 65px;
   background: #ffffff;
   border-top: 1px solid var(--border);
