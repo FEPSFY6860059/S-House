@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Clock-In Portal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    
+    <div id="login-card" class="card">
+      <h2>Employee Login</h2>
+      <form id="login-form">
+        <input type="text" id="employee-id" placeholder="Enter Employee ID" required />
+        <button type="submit" class="btn">Log In</button>
+      </form>
+    </div>
+
+    <div id="dashboard-card" class="card hidden">
+      <div class="header">
+        <h2 id="welcome-msg">Welcome</h2>
+        <button id="logout-btn" class="btn-secondary">Logout</button>
+      </div>
+
+      <div class="clock-section">
+        <p id="live-clock">00:00:00 AM</p>
+        <p id="status-text">Status: <strong>Clocked Out</strong></p>
+        <button id="toggle-clock-btn" class="btn btn-clock">Clock In</button>
+      </div>
+
+      <h3>Shift Log</h3>
+      <table id="logs-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+            <th>Total Hours</th>
+          </tr>
+        </thead>
+        <tbody id="logs-body">
+          </tbody>
+      </table>
+    </div>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
