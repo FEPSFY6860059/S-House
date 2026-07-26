@@ -1,7 +1,7 @@
 {
   "name": "ShiftHub Portal",
   "short_name": "ShiftHub",
-  "start_url": "/ShiftHub/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f8f6f0",
   "theme_color": "#708d81",
