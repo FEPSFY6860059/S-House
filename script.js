@@ -56,7 +56,7 @@ function switchTab(tabName) {
 
 // 4. Auto-Login Memory
 async function autoLogin() {
-  const savedEmployeeId = localStorage.getItem("shifthub_employee_id");
+  const savedEmployeeId = localStorage.getItem("shouse_employee_id");
 
   if (savedEmployeeId) {
     const { data: employee } = await supabaseClient
@@ -68,7 +68,7 @@ async function autoLogin() {
     if (employee) {
       await setupLoggedInUser(employee);
     } else {
-      localStorage.removeItem("shifthub_employee_id");
+      localStorage.removeItem("shouse_employee_id");
     }
   }
 }
@@ -78,7 +78,7 @@ async function setupLoggedInUser(employee) {
   currentEmployeeName = employee.name;
   isManager = (employee.role === "manager");
 
-  localStorage.setItem("shifthub_employee_id", currentEmployee);
+  localStorage.setItem("shouse_employee_id", currentEmployee);
 
   welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
   loginCard.classList.add("hidden");
@@ -118,7 +118,7 @@ if (loginForm) {
 // 6. Logout Handler
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
-    localStorage.removeItem("shifthub_employee_id");
+    localStorage.removeItem("shouse_employee_id");
     currentEmployee = null;
     currentEmployeeName = "";
     isManager = false;
@@ -294,13 +294,13 @@ async function loadWeeklyRoster() {
       const shifts = parts.slice(1).join(":").trim();
 
       listHTML += `
-        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;">
-          <strong style="color: #0f172a; font-size: 15px; display: block; margin-bottom: 6px;">${day}</strong>
-          <span style="color: #475569; font-size: 14px; line-height: 1.4;">${shifts || "No shifts"}</span>
+        <div style="background: #faf8f5; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;">
+          <strong style="color: #3a403d; font-size: 15px; display: block; margin-bottom: 6px;">${day}</strong>
+          <span style="color: #64748b; font-size: 14px; line-height: 1.4;">${shifts || "No shifts"}</span>
         </div>
       `;
     } else {
-      listHTML += `<p style="font-weight: 600; margin: 4px 0; color: #0f172a;">${line}</p>`;
+      listHTML += `<p style="font-weight: 600; margin: 4px 0; color: #3a403d;">${line}</p>`;
     }
   });
 
