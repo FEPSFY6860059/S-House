@@ -56,7 +56,7 @@ function switchTab(tabName) {
 
 // 4. Auto-Login Memory
 async function autoLogin() {
-  const savedEmployeeId = localStorage.getItem("worksync_employee_id");
+  const savedEmployeeId = localStorage.getItem("shifthub_employee_id");
 
   if (savedEmployeeId) {
     const { data: employee } = await supabaseClient
@@ -68,7 +68,7 @@ async function autoLogin() {
     if (employee) {
       await setupLoggedInUser(employee);
     } else {
-      localStorage.removeItem("worksync_employee_id");
+      localStorage.removeItem("shifthub_employee_id");
     }
   }
 }
@@ -78,7 +78,7 @@ async function setupLoggedInUser(employee) {
   currentEmployeeName = employee.name;
   isManager = (employee.role === "manager");
 
-  localStorage.setItem("worksync_employee_id", currentEmployee);
+  localStorage.setItem("shifthub_employee_id", currentEmployee);
 
   welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
   loginCard.classList.add("hidden");
@@ -118,7 +118,7 @@ if (loginForm) {
 // 6. Logout Handler
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
-    localStorage.removeItem("worksync_employee_id");
+    localStorage.removeItem("shifthub_employee_id");
     currentEmployee = null;
     currentEmployeeName = "";
     isManager = false;
@@ -282,7 +282,6 @@ async function loadWeeklyRoster() {
     return;
   }
 
-  // Convert raw schedule lines into clean list cards
   const lines = rawText.split("\n");
   let listHTML = `<div style="display: flex; flex-direction: column; gap: 12px; padding: 10px 0;">`;
 
