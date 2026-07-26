@@ -1,15 +1,22 @@
 {
-  "name": "Employee Clock-In Portal",
-  "short_name": "ClockIn",
+  "name": "WorkSync Portal",
+  "short_name": "WorkSync",
   "start_url": "/S-House/",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#10b981",
+  "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/3652/3652191.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3652/3652191.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
