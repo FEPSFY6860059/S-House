@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WorkSync - Employee Portal</title>
+  <title>ShiftHub - Team Portal</title>
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -13,11 +14,11 @@
     
     <main id="login-card" class="card">
       <div class="brand-logo">
-        <div class="logo-icon">📅</div>
-        <div class="logo-text">WorkSync</div>
+        <div class="logo-icon">🤝</div>
+        <div class="logo-text">ShiftHub</div>
       </div>
-      <h2>Employee Login</h2>
-      <p class="subtext">Enter your Employee ID to access your dashboard.</p>
+      <h2>Team Login</h2>
+      <p class="subtext">Enter your Employee ID to access your workspace.</p>
       
       <form id="login-form">
         <label for="employee-id">Employee ID</label>
@@ -36,8 +37,8 @@
       
       <header class="app-header">
         <div class="header-brand">
-          <span class="header-logo-icon">📅</span>
-          <span class="header-title">WorkSync</span>
+          <span class="header-logo-icon">🤝</span>
+          <span class="header-title">ShiftHub</span>
         </div>
         <div class="user-menu">
           <span id="welcome-msg">Welcome</span>
