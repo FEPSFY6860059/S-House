@@ -3,6 +3,11 @@ const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Master list of all employees to guarantee complete X-axis columns
+const ALL_EMPLOYEES = [
+  "Emma", "Kelly", "Bella", "Melissa", "Archie", "Izzie", "Henry", "Jacob", "Matilda"
+];
+
 // State Variables
 let currentEmployee = null;
 let currentEmployeeName = "";
@@ -34,7 +39,7 @@ setInterval(() => {
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// 3. Tab Navigation
+// 3. Tab Switcher
 if (navClockin && navTimetable) {
   navClockin.addEventListener("click", () => switchTab("clockin"));
   navTimetable.addEventListener("click", () => switchTab("timetable"));
@@ -54,7 +59,7 @@ function switchTab(tabName) {
   }
 }
 
-// 4. Auto-Login Memory Handling
+// 4. Auto-Login Memory
 async function autoLogin() {
   const savedEmployeeId = localStorage.getItem("clockin_employee_id");
 
@@ -148,7 +153,7 @@ async function checkActiveShift() {
   }
 }
 
-// 8. Clock In / Clock Out Action Handler
+// 8. Clock In / Out Action Handler
 if (toggleClockBtn) {
   toggleClockBtn.addEventListener("click", async () => {
     const now = new Date();
@@ -213,7 +218,7 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// 9. Load Logs
+// 9. Load Employee Logs
 async function loadLogs() {
   const { data: logs } = await supabaseClient
     .from("shift_logs")
@@ -249,7 +254,7 @@ function renderLogs(logs) {
   });
 }
 
-// 10. Load & Render Timetable (Employees across Top Headers, Days Mon-Sat vertically)
+// 10. Parse Schedule & Load Roster (X-Axis = Employees, Y-Axis = Days Mon-Sat)
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
@@ -277,19 +282,17 @@ async function loadWeeklyRoster() {
   if (rosterTitle) rosterTitle.textContent = roster.week_title;
   if (rosterUpdated) rosterUpdated.textContent = `Updated: ${new Date(roster.updated_at).toLocaleDateString()}`;
 
+  // Reset headers and body
   rosterHeaderRow.innerHTML = `<th class="day-col-head">Day</th>`;
   rosterTableBody.innerHTML = "";
 
   const rawText = roster.image_url || "";
   if (!rawText.trim()) {
-    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No schedule posted yet.</td></tr>`;
+    rosterTableBody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No schedule posted yet.</td></tr>`;
     return;
   }
 
-  const lines = rawText.split("\n");
-  const employees = [];
-  const scheduleData = {};
-
+  // Days mapping
   const daysList = [
     { key: "MON", label: "Mon" },
     { key: "TUE", label: "Tue" },
@@ -299,50 +302,56 @@ async function loadWeeklyRoster() {
     { key: "SAT", label: "Sat" }
   ];
 
-  lines.forEach((line) => {
-    if (!line.trim() || !line.includes(":")) return;
-
-    const parts = line.split(":");
-    const empName = parts[0].trim();
-    const details = parts.slice(1).join(":").trim();
-
-    employees.push(empName);
-    scheduleData[empName] = {};
-
-    daysList.forEach(d => scheduleData[empName][d.key] = "");
-
-    const entries = details.split(",");
-    entries.forEach((entry) => {
-      const trimmed = entry.trim();
-      daysList.forEach((dayObj) => {
-        if (trimmed.toUpperCase().includes(dayObj.key)) {
-          let timeStr = trimmed.replace(new RegExp(dayObj.key, "gi"), "").replace(/THUR/gi, "").trim();
-          scheduleData[empName][dayObj.key] = timeStr || "Scheduled";
-        }
-      });
+  // Initialize data grid structure: matrix[DayKey][EmployeeName] = timeString
+  const matrix = {};
+  daysList.forEach(d => {
+    matrix[d.key] = {};
+    ALL_EMPLOYEES.forEach(emp => {
+      matrix[d.key][emp] = "";
     });
   });
 
-  if (employees.length === 0) {
-    rosterTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No employee schedules found.</td></tr>`;
-    return;
-  }
+  // Parse lines formatted as "Day: Employee (Time) Employee (Time)"
+  const lines = rawText.split("\n");
 
-  // 1. Insert Employee Names into Header Row
-  employees.forEach((emp) => {
+  lines.forEach(line => {
+    if (!line.trim() || !line.includes(":")) return;
+
+    const colonIndex = line.indexOf(":");
+    const dayPrefix = line.substring(0, colonIndex).trim().toUpperCase();
+    const content = line.substring(colonIndex + 1).trim();
+
+    // Match which day this row belongs to
+    const targetDay = daysList.find(d => dayPrefix.startsWith(d.key));
+    if (!targetDay) return;
+
+    // Extract employee shifts using regex matching employee names and optional times in parentheses
+    ALL_EMPLOYEES.forEach(emp => {
+      // Look for Employee Name followed by optional time in parens, e.g., "Emma (8:30)" or "Kelly (10:30-3:30)"
+      const empRegex = new RegExp(`${emp}\\s*(?:\\(([^)]+)\\))?`, "i");
+      const match = content.match(empRegex);
+
+      if (match) {
+        const timeVal = match[1] ? match[1].trim() : "Scheduled";
+        matrix[targetDay.key][emp] = timeVal;
+      }
+    });
+  });
+
+  // 1. Build X-AXIS: All Employees across top header row
+  ALL_EMPLOYEES.forEach(emp => {
     const th = document.createElement("th");
     th.textContent = emp;
     rosterHeaderRow.appendChild(th);
   });
 
-  // 2. Insert Day Rows and fill shift cells under each employee
-  daysList.forEach((dayObj) => {
+  // 2. Build Y-AXIS: Mon-Sat down the side rows
+  daysList.forEach(dayObj => {
     const tr = document.createElement("tr");
-
     let rowHTML = `<td>${dayObj.label}</td>`;
 
-    employees.forEach((emp) => {
-      const shiftTime = scheduleData[emp][dayObj.key];
+    ALL_EMPLOYEES.forEach(emp => {
+      const shiftTime = matrix[dayObj.key][emp];
       if (shiftTime) {
         rowHTML += `<td class="shift-cell">${shiftTime}</td>`;
       } else {
@@ -355,7 +364,7 @@ async function loadWeeklyRoster() {
   });
 }
 
-// 11. Manager Schedule Publishing
+// 11. Manager Schedule Publishing Handler
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
