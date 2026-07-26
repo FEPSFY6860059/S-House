@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShiftSync - Employee Portal</title>
+  <title>WorkSync - Employee Portal</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -13,8 +13,8 @@
     
     <main id="login-card" class="card">
       <div class="brand-logo">
-        <div class="logo-icon">⚡</div>
-        <div class="logo-text">ShiftSync</div>
+        <div class="logo-icon">📅</div>
+        <div class="logo-text">WorkSync</div>
       </div>
       <h2>Employee Login</h2>
       <p class="subtext">Enter your Employee ID to access your dashboard.</p>
@@ -36,8 +36,8 @@
       
       <header class="app-header">
         <div class="header-brand">
-          <span class="header-logo-icon">⚡</span>
-          <span class="header-title">ShiftSync</span>
+          <span class="header-logo-icon">📅</span>
+          <span class="header-title">WorkSync</span>
         </div>
         <div class="user-menu">
           <span id="welcome-msg">Welcome</span>
@@ -74,16 +74,7 @@
           <p id="roster-updated" class="subtext">Loading schedule...</p>
 
           <div class="table-container">
-            <table id="roster-table">
-              <thead>
-                <tr id="roster-header-row">
-                  <th class="day-col-head">Day</th>
-                  </tr>
-              </thead>
-              <tbody id="roster-table-body">
-                </tbody>
-            </table>
-          </div>
+            </div>
 
           <div id="admin-schedule-box" class="admin-box hidden">
             <h4>Manager Tool: Update Schedule</h4>
@@ -95,11 +86,11 @@
               placeholder="e.g. July 27 - Aug 2" 
             />
 
-            <label for="admin-content-input">Schedule Input (One employee per line)</label>
+            <label for="admin-content-input">Schedule Input</label>
             <textarea 
               id="admin-content-input" 
               rows="6" 
-              placeholder="Bella: Mon 8:30 - 3:30, Tue 8:30 - 3:30&#10;Emma: Mon 8:30 - 3:30, Wed 8:30 - 3:30&#10;Kelly: Tue 8:30 - 3:30, Thu 8:30 - 3:30&#10;Melissa: Fri 8:30 - 3:30, Sat 8:30 - 3:30"
+              placeholder="Mon: Emma (8:30) Kelly (10:30-3:30)&#10;Tue: Kelly (8:30-2:30) Bella (10:30-3:30)&#10;Wed: Bella (8:30-2:30) Izzie (10:30-2:30)&#10;Thu: Emma (10:30) Melissa (10:30-3:00)&#10;Fri: Kelly (8:30-2:30) Jacob (10:30-2:30)&#10;Sat: Closed"
             ></textarea>
 
             <button id="publish-roster-btn" class="btn btn-dark">Publish Schedule</button>
