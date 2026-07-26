@@ -56,7 +56,7 @@ function switchTab(tabName) {
 
 // 4. Auto-Login Memory
 async function autoLogin() {
-  const savedEmployeeId = localStorage.getItem("clockin_employee_id");
+  const savedEmployeeId = localStorage.getItem("worksync_employee_id");
 
   if (savedEmployeeId) {
     const { data: employee } = await supabaseClient
@@ -68,7 +68,7 @@ async function autoLogin() {
     if (employee) {
       await setupLoggedInUser(employee);
     } else {
-      localStorage.removeItem("clockin_employee_id");
+      localStorage.removeItem("worksync_employee_id");
     }
   }
 }
@@ -78,7 +78,7 @@ async function setupLoggedInUser(employee) {
   currentEmployeeName = employee.name;
   isManager = (employee.role === "manager");
 
-  localStorage.setItem("clockin_employee_id", currentEmployee);
+  localStorage.setItem("worksync_employee_id", currentEmployee);
 
   welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
   loginCard.classList.add("hidden");
@@ -118,7 +118,7 @@ if (loginForm) {
 // 6. Logout Handler
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
-    localStorage.removeItem("clockin_employee_id");
+    localStorage.removeItem("worksync_employee_id");
     currentEmployee = null;
     currentEmployeeName = "";
     isManager = false;
@@ -240,4 +240,104 @@ function renderLogs(logs) {
 
     const dateStr = clockInDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const timeOutStr = clockOutDate ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
+    const timeOutStr = clockOutDate ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Active";
+    const hours = log.total_hours ? `${Number(log.total_hours).toFixed(2)} hrs` : "--";
+
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${dateStr}</td><td>${timeInStr}</td><td>${timeOutStr}</td><td>${hours}</td>`;
+    logsBody.appendChild(row);
+  });
+}
+
+// 10. Load Schedule as a Simple, Clear List
+async function loadWeeklyRoster() {
+  const adminBox = document.getElementById("admin-schedule-box");
+  const rosterTitle = document.getElementById("roster-title");
+  const rosterUpdated = document.getElementById("roster-updated");
+  const tableContainer = document.querySelector(".table-container");
+
+  if (adminBox) {
+    if (isManager) {
+      adminBox.classList.remove("hidden");
+    } else {
+      adminBox.classList.add("hidden");
+    }
+  }
+
+  const { data: roster } = await supabaseClient
+    .from("weekly_roster")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!roster || !tableContainer) return;
+
+  if (rosterTitle) rosterTitle.textContent = roster.week_title;
+  if (rosterUpdated) rosterUpdated.textContent = `Updated: ${new Date(roster.updated_at).toLocaleDateString()}`;
+
+  const rawText = roster.image_url || "";
+  if (!rawText.trim()) {
+    tableContainer.innerHTML = `<p style="text-align:center; padding: 20px;">No schedule posted yet.</p>`;
+    return;
+  }
+
+  // Convert raw schedule lines into clean list cards
+  const lines = rawText.split("\n");
+  let listHTML = `<div style="display: flex; flex-direction: column; gap: 12px; padding: 10px 0;">`;
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+
+    if (line.includes(":")) {
+      const parts = line.split(":");
+      const day = parts[0].trim();
+      const shifts = parts.slice(1).join(":").trim();
+
+      listHTML += `
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;">
+          <strong style="color: #0f172a; font-size: 15px; display: block; margin-bottom: 6px;">${day}</strong>
+          <span style="color: #475569; font-size: 14px; line-height: 1.4;">${shifts || "No shifts"}</span>
+        </div>
+      `;
+    } else {
+      listHTML += `<p style="font-weight: 600; margin: 4px 0; color: #0f172a;">${line}</p>`;
+    }
+  });
+
+  listHTML += `</div>`;
+  tableContainer.innerHTML = listHTML;
+}
+
+// 11. Manager Schedule Publishing Handler
+const publishBtn = document.getElementById("publish-roster-btn");
+if (publishBtn) {
+  publishBtn.addEventListener("click", async () => {
+    const title = document.getElementById("admin-title-input").value.trim();
+    const content = document.getElementById("admin-content-input").value.trim();
+
+    if (!title || !content) {
+      alert("Please fill in both the week title and schedule details.");
+      return;
+    }
+
+    publishBtn.disabled = true;
+    publishBtn.textContent = "Publishing...";
+
+    const { error } = await supabaseClient
+      .from("weekly_roster")
+      .insert([{ week_title: title, image_url: content }]);
+
+    if (error) {
+      alert("Failed to publish schedule: " + error.message);
+    } else {
+      alert("Weekly schedule published successfully!");
+      document.getElementById("admin-title-input").value = "";
+      document.getElementById("admin-content-input").value = "";
+      await loadWeeklyRoster();
+    }
+
+    publishBtn.disabled = false;
+    publishBtn.textContent = "Publish Schedule";
+  });
+}
