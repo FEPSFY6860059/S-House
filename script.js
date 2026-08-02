@@ -76,7 +76,9 @@ async function autoLogin() {
 async function setupLoggedInUser(employee) {
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
-  isManager = (employee.role === "manager");
+  
+  // Only grant manager permissions if role is manager AND name is Emma
+  isManager = (employee.role === "manager" && employee.name.trim().toLowerCase() === "emma");
 
   localStorage.setItem("shouse_employee_id", currentEmployee);
 
@@ -249,7 +251,7 @@ function renderLogs(logs) {
   });
 }
 
-// 10. MANAGER TOOL: Edit Staff Member Clock-In / Clock-Out
+// 10. MANAGER TOOL: Edit Staff Member Clock-In / Clock-Out (Emma Only)
 async function setupManagerEditTool() {
   const clockCard = document.getElementById("tab-clockin");
   let managerSection = document.getElementById("manager-edit-section");
