@@ -87,6 +87,7 @@ async function setupLoggedInUser(employee) {
   await checkActiveShift();
   await loadLogs();
   await loadWeeklyRoster();
+  if (isManager) await setupManagerEditTool();
 }
 
 autoLogin();
@@ -219,7 +220,6 @@ async function loadLogs() {
     .from("shift_logs")
     .select("*")
     .eq("employee_id", currentEmployee)
-    .not("clock_out", "is", null)
     .order("clock_in", { ascending: false });
 
   renderLogs(logs || []);
@@ -230,7 +230,7 @@ function renderLogs(logs) {
   logsBody.innerHTML = "";
 
   if (logs.length === 0) {
-    logsBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No completed shifts logged yet.</td></tr>`;
+    logsBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No shifts logged yet.</td></tr>`;
     return;
   }
 
@@ -249,7 +249,123 @@ function renderLogs(logs) {
   });
 }
 
-// 10. Load Schedule as a Simple, Clear List
+// 10. MANAGER TOOL: Edit Staff Member Clock-In / Clock-Out
+async function setupManagerEditTool() {
+  const clockCard = document.getElementById("tab-clockin");
+  let managerSection = document.getElementById("manager-edit-section");
+
+  if (!managerSection) {
+    managerSection = document.createElement("div");
+    managerSection.id = "manager-edit-section";
+    managerSection.className = "admin-box";
+    managerSection.innerHTML = `
+      <h4>Manager Tool: Edit Staff Shift</h4>
+      <label for="mgr-select-staff">Select Staff Member</label>
+      <select id="mgr-select-staff">
+        <option value="">-- Choose Employee --</option>
+      </select>
+
+      <div id="mgr-shift-list-box" style="margin-top: 12px;"></div>
+    `;
+    clockCard.appendChild(managerSection);
+  }
+
+  // Populate employee select dropdown
+  const { data: employees } = await supabaseClient.from("employees").select("*");
+  const staffSelect = document.getElementById("mgr-select-staff");
+  if (staffSelect && employees) {
+    staffSelect.innerHTML = `<option value="">-- Choose Employee --</option>`;
+    employees.forEach(emp => {
+      staffSelect.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.id})</option>`;
+    });
+
+    staffSelect.onchange = (e) => loadStaffShiftsForEditing(e.target.value);
+  }
+}
+
+async function loadStaffShiftsForEditing(empId) {
+  const box = document.getElementById("mgr-shift-list-box");
+  if (!empId || !box) {
+    box.innerHTML = "";
+    return;
+  }
+
+  const { data: shifts } = await supabaseClient
+    .from("shift_logs")
+    .select("*")
+    .eq("employee_id", empId)
+    .order("clock_in", { ascending: false })
+    .limit(5);
+
+  if (!shifts || shifts.length === 0) {
+    box.innerHTML = `<p class="subtext" style="margin-top:10px;">No shift history found for this staff member.</p>`;
+    return;
+  }
+
+  let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+  shifts.forEach(shift => {
+    const inISO = new Date(shift.clock_in).toISOString().slice(0, 16);
+    const outISO = shift.clock_out ? new Date(shift.clock_out).toISOString().slice(0, 16) : "";
+
+    html += `
+      <div class="edit-shift-box">
+        <h5>Shift ID: ${shift.id}</h5>
+        <label>Clock In</label>
+        <input type="datetime-local" id="in-${shift.id}" value="${inISO}" />
+        
+        <label>Clock Out</label>
+        <input type="datetime-local" id="out-${shift.id}" value="${outISO}" />
+
+        <div class="edit-btn-group">
+          <button class="btn btn-small" onclick="saveShiftEdit(${shift.id})">Save Adjustment</button>
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  box.innerHTML = html;
+}
+
+// Save adjusted times to Supabase
+window.saveShiftEdit = async function(shiftId) {
+  const inVal = document.getElementById(`in-${shiftId}`).value;
+  const outVal = document.getElementById(`out-${shiftId}`).value;
+
+  if (!inVal) {
+    alert("Clock-in time cannot be empty.");
+    return;
+  }
+
+  const clockIn = new Date(inVal);
+  let clockOut = outVal ? new Date(outVal) : null;
+  let totalHours = null;
+
+  if (clockOut) {
+    if (clockOut <= clockIn) {
+      alert("Clock-out time must be after clock-in time.");
+      return;
+    }
+    totalHours = ((clockOut - clockIn) / (1000 * 60 * 60)).toFixed(2);
+  }
+
+  const { error } = await supabaseClient
+    .from("shift_logs")
+    .update({
+      clock_in: clockIn.toISOString(),
+      clock_out: clockOut ? clockOut.toISOString() : null,
+      total_hours: totalHours
+    })
+    .eq("id", shiftId);
+
+  if (error) {
+    alert("Error updating shift: " + error.message);
+  } else {
+    alert("Shift updated successfully!");
+    await loadLogs();
+  }
+};
+
+// 11. Load Schedule as a Simple, Clear List
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
@@ -308,7 +424,7 @@ async function loadWeeklyRoster() {
   tableContainer.innerHTML = listHTML;
 }
 
-// 11. Manager Schedule Publishing Handler
+// 12. Manager Schedule Publishing Handler
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
