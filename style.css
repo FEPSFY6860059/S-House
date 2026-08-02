@@ -255,3 +255,52 @@ input[type="text"], textarea {
 .nav-btn.active {
   color: var(--primary);
 }
+/* Manager Edit Shift Form */
+.edit-shift-box {
+  background: var(--item-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.edit-shift-box h5 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.edit-shift-box label {
+  font-size: 11px;
+  font-weight: 700;
+  display: block;
+  margin: 8px 0 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.edit-shift-box input[type="datetime-local"],
+.edit-shift-box select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-dark);
+  box-sizing: border-box;
+}
+
+.edit-btn-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-small {
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+}
