@@ -28,6 +28,14 @@ const navTimetable = document.getElementById("nav-timetable");
 const tabClockin = document.getElementById("tab-clockin");
 const tabTimetable = document.getElementById("tab-timetable");
 
+// Helper: Fix 1-hour timezone offset for input values
+function toLocalISOString(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+  return localDate.toISOString().slice(0, 16);
+}
+
 // 2. Live Clock Update
 setInterval(() => {
   const now = new Date();
@@ -42,15 +50,15 @@ if (navClockin && navTimetable) {
 
 function switchTab(tabName) {
   if (tabName === "clockin") {
-    tabClockin.classList.remove("hidden");
-    tabTimetable.classList.add("hidden");
-    navClockin.classList.add("active");
-    navTimetable.classList.remove("active");
+    tabClockin?.classList.remove("hidden");
+    tabTimetable?.classList.add("hidden");
+    navClockin?.classList.add("active");
+    navTimetable?.classList.remove("active");
   } else {
-    tabClockin.classList.add("hidden");
-    tabTimetable.classList.remove("hidden");
-    navClockin.classList.remove("active");
-    navTimetable.classList.add("active");
+    tabClockin?.classList.add("hidden");
+    tabTimetable?.classList.remove("hidden");
+    navClockin?.classList.remove("active");
+    navTimetable?.classList.add("active");
   }
 }
 
@@ -77,19 +85,29 @@ async function setupLoggedInUser(employee) {
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
   
-  // Only grant manager permissions if role is manager AND name is Emma
-  isManager = (employee.role === "manager" && employee.name.trim().toLowerCase() === "emma");
+  // Strict Manager Check (Role is manager AND Name is Emma)
+  const isEmma = employee.name && employee.name.trim().toLowerCase() === "emma";
+  isManager = (employee.role === "manager" && isEmma);
 
   localStorage.setItem("shouse_employee_id", currentEmployee);
 
-  welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
-  loginCard.classList.add("hidden");
-  dashboardCard.classList.remove("hidden");
+  if (welcomeMsg) welcomeMsg.textContent = `Welcome, ${currentEmployeeName}`;
+  loginCard?.classList.add("hidden");
+  dashboardCard?.classList.remove("hidden");
+
+  // Remove existing manager edit box if logging in as regular staff
+  const existingManagerSection = document.getElementById("manager-edit-section");
+  if (existingManagerSection) {
+    existingManagerSection.classList.add("hidden");
+  }
 
   await checkActiveShift();
   await loadLogs();
   await loadWeeklyRoster();
-  if (isManager) await setupManagerEditTool();
+
+  if (isManager) {
+    await setupManagerEditTool();
+  }
 }
 
 autoLogin();
@@ -127,9 +145,12 @@ if (logoutBtn) {
     isManager = false;
     activeShiftId = null;
 
-    dashboardCard.classList.add("hidden");
-    loginCard.classList.remove("hidden");
-    employeeIdInput.value = "";
+    const managerSection = document.getElementById("manager-edit-section");
+    if (managerSection) managerSection.remove();
+
+    dashboardCard?.classList.add("hidden");
+    loginCard?.classList.remove("hidden");
+    if (employeeIdInput) employeeIdInput.value = "";
   });
 }
 
@@ -205,6 +226,7 @@ if (toggleClockBtn) {
 }
 
 function updateClockUI(isClockedIn) {
+  if (!statusText || !toggleClockBtn) return;
   if (isClockedIn) {
     statusText.innerHTML = "Status: <strong>Clocked In</strong>";
     toggleClockBtn.textContent = "Clock Out";
@@ -251,28 +273,40 @@ function renderLogs(logs) {
   });
 }
 
-// 10. MANAGER TOOL: Edit Staff Member Clock-In / Clock-Out (Emma Only)
+// 10. MANAGER TOOLS: Edit Shifts & Export (Emma Only)
 async function setupManagerEditTool() {
   const clockCard = document.getElementById("tab-clockin");
   let managerSection = document.getElementById("manager-edit-section");
 
-  if (!managerSection) {
+  if (!managerSection && clockCard) {
     managerSection = document.createElement("div");
     managerSection.id = "manager-edit-section";
     managerSection.className = "admin-box";
+    managerSection.style.marginTop = "20px";
     managerSection.innerHTML = `
-      <h4>Manager Tool: Edit Staff Shift</h4>
-      <label for="mgr-select-staff">Select Staff Member</label>
+      <h4>Manager Tool: Shift Adjustments</h4>
+      
+      <label for="mgr-select-staff">Edit Staff Member</label>
       <select id="mgr-select-staff">
         <option value="">-- Choose Employee --</option>
       </select>
 
       <div id="mgr-shift-list-box" style="margin-top: 12px;"></div>
+
+      <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);" />
+
+      <label>Export Shift Records</label>
+      <button id="export-csv-btn" class="btn btn-dark" style="margin-top: 6px; width: 100%;">
+        📥 Export All Shifts to Excel (.csv)
+      </button>
     `;
     clockCard.appendChild(managerSection);
+
+    document.getElementById("export-csv-btn")?.addEventListener("click", exportShiftsToCSV);
   }
 
-  // Populate employee select dropdown
+  if (managerSection) managerSection.classList.remove("hidden");
+
   const { data: employees } = await supabaseClient.from("employees").select("*");
   const staffSelect = document.getElementById("mgr-select-staff");
   if (staffSelect && employees) {
@@ -300,27 +334,26 @@ async function loadStaffShiftsForEditing(empId) {
     .limit(5);
 
   if (!shifts || shifts.length === 0) {
-    box.innerHTML = `<p class="subtext" style="margin-top:10px;">No shift history found for this staff member.</p>`;
+    box.innerHTML = `<p class="subtext" style="margin-top:10px;">No shift history found for this employee.</p>`;
     return;
   }
 
   let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
   shifts.forEach(shift => {
-    const inISO = new Date(shift.clock_in).toISOString().slice(0, 16);
-    const outISO = shift.clock_out ? new Date(shift.clock_out).toISOString().slice(0, 16) : "";
+    // FIX: Preserves local timezone correctly
+    const inISO = toLocalISOString(shift.clock_in);
+    const outISO = toLocalISOString(shift.clock_out);
 
     html += `
-      <div class="edit-shift-box">
-        <h5>Shift ID: ${shift.id}</h5>
+      <div class="edit-shift-box" style="background:#fff; padding:10px; border-radius:8px; border:1px solid #ddd;">
+        <h5 style="margin:0 0 8px 0;">Shift ID: ${shift.id}</h5>
         <label>Clock In</label>
-        <input type="datetime-local" id="in-${shift.id}" value="${inISO}" />
+        <input type="datetime-local" id="in-${shift.id}" value="${inISO}" style="width:100%; margin-bottom:8px;" />
         
         <label>Clock Out</label>
-        <input type="datetime-local" id="out-${shift.id}" value="${outISO}" />
+        <input type="datetime-local" id="out-${shift.id}" value="${outISO}" style="width:100%; margin-bottom:8px;" />
 
-        <div class="edit-btn-group">
-          <button class="btn btn-small" onclick="saveShiftEdit(${shift.id})">Save Adjustment</button>
-        </div>
+        <button class="btn btn-small" onclick="saveShiftEdit(${shift.id})">Save Adjustment</button>
       </div>
     `;
   });
@@ -328,7 +361,6 @@ async function loadStaffShiftsForEditing(empId) {
   box.innerHTML = html;
 }
 
-// Save adjusted times to Supabase
 window.saveShiftEdit = async function(shiftId) {
   const inVal = document.getElementById(`in-${shiftId}`).value;
   const outVal = document.getElementById(`out-${shiftId}`).value;
@@ -367,7 +399,61 @@ window.saveShiftEdit = async function(shiftId) {
   }
 };
 
-// 11. Load Schedule as a Simple, Clear List
+// CSV EXPORT FUNCTION
+async function exportShiftsToCSV() {
+  const btn = document.getElementById("export-csv-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Generating File...";
+  }
+
+  const { data: logs, error } = await supabaseClient
+    .from("shift_logs")
+    .select("*")
+    .order("clock_in", { ascending: false });
+
+  if (error || !logs || logs.length === 0) {
+    alert("No shift logs found to export.");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "📥 Export All Shifts to Excel (.csv)";
+    }
+    return;
+  }
+
+  const headers = ["Shift ID", "Employee ID", "Clock In", "Clock Out", "Total Hours"];
+  const csvRows = [headers.join(",")];
+
+  logs.forEach(row => {
+    const clockInStr = row.clock_in ? new Date(row.clock_in).toLocaleString() : "";
+    const clockOutStr = row.clock_out ? new Date(row.clock_out).toLocaleString() : "Active";
+
+    const line = [
+      row.id,
+      `"${row.employee_id || ''}"`,
+      `"${clockInStr}"`,
+      `"${clockOutStr}"`,
+      row.total_hours || 0
+    ];
+    csvRows.push(line.join(","));
+  });
+
+  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `S-House_Shifts_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "📥 Export All Shifts to Excel (.csv)";
+  }
+}
+
+// 11. Load Schedule as a Simple List
 async function loadWeeklyRoster() {
   const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
@@ -430,8 +516,8 @@ async function loadWeeklyRoster() {
 const publishBtn = document.getElementById("publish-roster-btn");
 if (publishBtn) {
   publishBtn.addEventListener("click", async () => {
-    const title = document.getElementById("admin-title-input").value.trim();
-    const content = document.getElementById("admin-content-input").value.trim();
+    const title = document.getElementById("admin-title-input")?.value.trim();
+    const content = document.getElementById("admin-content-input")?.value.trim();
 
     if (!title || !content) {
       alert("Please fill in both the week title and schedule details.");
