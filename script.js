@@ -77,9 +77,8 @@ async function setupLoggedInUser(employee) {
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
   
-  // STRICT CHECK: Manager role AND name must be Emma
-  const isEmma = employee.name && employee.name.trim().toLowerCase() === "emma";
-  isManager = (employee.role === "manager" && isEmma);
+  // Only grant manager permissions if role is manager AND name is Emma
+  isManager = (employee.role === "manager" && employee.name.trim().toLowerCase() === "emma");
 
   localStorage.setItem("shouse_employee_id", currentEmployee);
 
@@ -87,20 +86,10 @@ async function setupLoggedInUser(employee) {
   loginCard.classList.add("hidden");
   dashboardCard.classList.remove("hidden");
 
-  // Hide manager section by default
-  const existingManagerSection = document.getElementById("manager-edit-section");
-  if (existingManagerSection) {
-    existingManagerSection.classList.add("hidden");
-  }
-
   await checkActiveShift();
   await loadLogs();
   await loadWeeklyRoster();
-
-  // Only initialize manager features if it's Emma
-  if (isManager) {
-    await setupManagerEditTool();
-  }
+  if (isManager) await setupManagerEditTool();
 }
 
 autoLogin();
@@ -137,9 +126,6 @@ if (logoutBtn) {
     currentEmployeeName = "";
     isManager = false;
     activeShiftId = null;
-
-    const managerSection = document.getElementById("manager-edit-section");
-    if (managerSection) managerSection.remove();
 
     dashboardCard.classList.add("hidden");
     loginCard.classList.remove("hidden");
@@ -252,4 +238,223 @@ function renderLogs(logs) {
 
   logs.forEach((log) => {
     const clockInDate = new Date(log.clock_in);
-    const clockOutDate = log.clock_
+    const clockOutDate = log.clock_out ? new Date(log.clock_out) : null;
+
+    const dateStr = clockInDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeOutStr = clockOutDate ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Active";
+    const hours = log.total_hours ? `${Number(log.total_hours).toFixed(2)} hrs` : "--";
+
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${dateStr}</td><td>${timeInStr}</td><td>${timeOutStr}</td><td>${hours}</td>`;
+    logsBody.appendChild(row);
+  });
+}
+
+// 10. MANAGER TOOL: Edit Staff Member Clock-In / Clock-Out (Emma Only)
+async function setupManagerEditTool() {
+  const clockCard = document.getElementById("tab-clockin");
+  let managerSection = document.getElementById("manager-edit-section");
+
+  if (!managerSection) {
+    managerSection = document.createElement("div");
+    managerSection.id = "manager-edit-section";
+    managerSection.className = "admin-box";
+    managerSection.innerHTML = `
+      <h4>Manager Tool: Edit Staff Shift</h4>
+      <label for="mgr-select-staff">Select Staff Member</label>
+      <select id="mgr-select-staff">
+        <option value="">-- Choose Employee --</option>
+      </select>
+
+      <div id="mgr-shift-list-box" style="margin-top: 12px;"></div>
+    `;
+    clockCard.appendChild(managerSection);
+  }
+
+  // Populate employee select dropdown
+  const { data: employees } = await supabaseClient.from("employees").select("*");
+  const staffSelect = document.getElementById("mgr-select-staff");
+  if (staffSelect && employees) {
+    staffSelect.innerHTML = `<option value="">-- Choose Employee --</option>`;
+    employees.forEach(emp => {
+      staffSelect.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.id})</option>`;
+    });
+
+    staffSelect.onchange = (e) => loadStaffShiftsForEditing(e.target.value);
+  }
+}
+
+async function loadStaffShiftsForEditing(empId) {
+  const box = document.getElementById("mgr-shift-list-box");
+  if (!empId || !box) {
+    box.innerHTML = "";
+    return;
+  }
+
+  const { data: shifts } = await supabaseClient
+    .from("shift_logs")
+    .select("*")
+    .eq("employee_id", empId)
+    .order("clock_in", { ascending: false })
+    .limit(5);
+
+  if (!shifts || shifts.length === 0) {
+    box.innerHTML = `<p class="subtext" style="margin-top:10px;">No shift history found for this staff member.</p>`;
+    return;
+  }
+
+  let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+  shifts.forEach(shift => {
+    const inISO = new Date(shift.clock_in).toISOString().slice(0, 16);
+    const outISO = shift.clock_out ? new Date(shift.clock_out).toISOString().slice(0, 16) : "";
+
+    html += `
+      <div class="edit-shift-box">
+        <h5>Shift ID: ${shift.id}</h5>
+        <label>Clock In</label>
+        <input type="datetime-local" id="in-${shift.id}" value="${inISO}" />
+        
+        <label>Clock Out</label>
+        <input type="datetime-local" id="out-${shift.id}" value="${outISO}" />
+
+        <div class="edit-btn-group">
+          <button class="btn btn-small" onclick="saveShiftEdit(${shift.id})">Save Adjustment</button>
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  box.innerHTML = html;
+}
+
+// Save adjusted times to Supabase
+window.saveShiftEdit = async function(shiftId) {
+  const inVal = document.getElementById(`in-${shiftId}`).value;
+  const outVal = document.getElementById(`out-${shiftId}`).value;
+
+  if (!inVal) {
+    alert("Clock-in time cannot be empty.");
+    return;
+  }
+
+  const clockIn = new Date(inVal);
+  let clockOut = outVal ? new Date(outVal) : null;
+  let totalHours = null;
+
+  if (clockOut) {
+    if (clockOut <= clockIn) {
+      alert("Clock-out time must be after clock-in time.");
+      return;
+    }
+    totalHours = ((clockOut - clockIn) / (1000 * 60 * 60)).toFixed(2);
+  }
+
+  const { error } = await supabaseClient
+    .from("shift_logs")
+    .update({
+      clock_in: clockIn.toISOString(),
+      clock_out: clockOut ? clockOut.toISOString() : null,
+      total_hours: totalHours
+    })
+    .eq("id", shiftId);
+
+  if (error) {
+    alert("Error updating shift: " + error.message);
+  } else {
+    alert("Shift updated successfully!");
+    await loadLogs();
+  }
+};
+
+// 11. Load Schedule as a Simple, Clear List
+async function loadWeeklyRoster() {
+  const adminBox = document.getElementById("admin-schedule-box");
+  const rosterTitle = document.getElementById("roster-title");
+  const rosterUpdated = document.getElementById("roster-updated");
+  const tableContainer = document.querySelector(".table-container");
+
+  if (adminBox) {
+    if (isManager) {
+      adminBox.classList.remove("hidden");
+    } else {
+      adminBox.classList.add("hidden");
+    }
+  }
+
+  const { data: roster } = await supabaseClient
+    .from("weekly_roster")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!roster || !tableContainer) return;
+
+  if (rosterTitle) rosterTitle.textContent = roster.week_title;
+  if (rosterUpdated) rosterUpdated.textContent = `Updated: ${new Date(roster.updated_at).toLocaleDateString()}`;
+
+  const rawText = roster.image_url || "";
+  if (!rawText.trim()) {
+    tableContainer.innerHTML = `<p style="text-align:center; padding: 20px;">No schedule posted yet.</p>`;
+    return;
+  }
+
+  const lines = rawText.split("\n");
+  let listHTML = `<div style="display: flex; flex-direction: column; gap: 12px; padding: 10px 0;">`;
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+
+    if (line.includes(":")) {
+      const parts = line.split(":");
+      const day = parts[0].trim();
+      const shifts = parts.slice(1).join(":").trim();
+
+      listHTML += `
+        <div style="background: #faf8f5; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;">
+          <strong style="color: #3a403d; font-size: 15px; display: block; margin-bottom: 6px;">${day}</strong>
+          <span style="color: #64748b; font-size: 14px; line-height: 1.4;">${shifts || "No shifts"}</span>
+        </div>
+      `;
+    } else {
+      listHTML += `<p style="font-weight: 600; margin: 4px 0; color: #3a403d;">${line}</p>`;
+    }
+  });
+
+  listHTML += `</div>`;
+  tableContainer.innerHTML = listHTML;
+}
+
+// 12. Manager Schedule Publishing Handler
+const publishBtn = document.getElementById("publish-roster-btn");
+if (publishBtn) {
+  publishBtn.addEventListener("click", async () => {
+    const title = document.getElementById("admin-title-input").value.trim();
+    const content = document.getElementById("admin-content-input").value.trim();
+
+    if (!title || !content) {
+      alert("Please fill in both the week title and schedule details.");
+      return;
+    }
+
+    publishBtn.disabled = true;
+    publishBtn.textContent = "Publishing...";
+
+    const { error } = await supabaseClient
+      .from("weekly_roster")
+      .insert([{ week_title: title, image_url: content }]);
+
+    if (error) {
+      alert("Failed to publish schedule: " + error.message);
+    } else {
+      alert("Weekly schedule published successfully!");
+      document.getElementById("admin-title-input").value = "";
+      document.getElementById("admin-content-input").value = "";
+      await loadWeeklyRoster();
+    }
+
+    publishBtn.disabled = false;
+    publishBtn.textContent = "Publish Schedule";
+  });
+}
