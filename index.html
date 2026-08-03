@@ -1,121 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShiftHub - Team Portal</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>S-House Portal</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <div class="app-container">
     
-    <main id="login-card" class="card">
-      <div class="brand-logo">
-        <div class="logo-icon">🏠</div>
-        <div class="logo-text">ShiftHub</div>
+    <div id="login-card" class="card">
+      <div class="brand-header">
+        <h1>S-House</h1>
+        <p>Staff Portal</p>
       </div>
-      <h2>Team Login</h2>
-      <p class="subtext">Enter your Employee ID to access your workspace.</p>
-      
+
       <form id="login-form">
         <label for="employee-id">Employee ID</label>
-        <input 
-          type="text" 
-          id="employee-id" 
-          placeholder="e.g. EMP001" 
-          required 
-          autocomplete="off"
-        />
-        <button type="submit" class="btn">Log In</button>
+        <input type="password" id="employee-id" placeholder="Enter your ID" required>
+        <button type="submit" class="btn btn-primary">Login</button>
       </form>
-    </main>
-
-    <div id="dashboard-card" class="hidden">
-      
-      <header class="app-header">
-        <div class="header-brand">
-          <span class="header-logo-icon">🏠</span>
-          <span class="header-title">ShiftHub</span>
-        </div>
-        <div class="user-menu">
-          <span id="welcome-msg">Welcome</span>
-          <button id="logout-btn" class="btn-logout">Logout</button>
-        </div>
-      </header>
-
-      <main id="tab-clockin" class="tab-content card clock-card">
-        <p id="status-text">Status: <strong>Clocked Out</strong></p>
-        <h1 id="live-clock">--:--:--</h1>
-        
-        <button id="toggle-clock-btn" class="btn btn-clock">Clock In</button>
-
-        <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border);" />
-
-        <h4 style="text-align: left; margin-bottom: 10px;">Recent Shifts</h4>
-        <table>
-          <thead>
-            <tr>
-              <th style="text-align: left;">Date</th>
-              <th>In</th>
-              <th>Out</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="logs-body">
-            </tbody>
-        </table>
-      </main>
-
-      <main id="tab-timetable" class="tab-content hidden">
-        <div class="card schedule-card">
-          <h3 id="roster-title">Weekly Schedule</h3>
-          <p id="roster-updated" class="subtext">Loading schedule...</p>
-
-          <div class="table-container">
-            </div>
-
-          <div id="admin-schedule-box" class="admin-box hidden">
-            <h4>Manager Tool: Update Schedule</h4>
-            
-            <label for="admin-title-input">Week Title</label>
-            <input 
-              type="text" 
-              id="admin-title-input" 
-              placeholder="e.g. July 27 - Aug 2" 
-            />
-
-            <label for="admin-content-input">Schedule Input</label>
-            <textarea 
-              id="admin-content-input" 
-              rows="6" 
-              placeholder="Mon: Emma (8:30) Kelly (10:30-3:30)&#10;Tue: Kelly (8:30-2:30) Bella (10:30-3:30)&#10;Wed: Bella (8:30-2:30) Izzie (10:30-2:30)&#10;Thu: Emma (10:30) Melissa (10:30-3:00)&#10;Fri: Kelly (8:30-2:30) Jacob (10:30-2:30)&#10;Sat: Closed"
-            ></textarea>
-
-            <button id="publish-roster-btn" class="btn btn-dark">Publish Schedule</button>
-          </div>
-        </div>
-      </main>
-
-      <nav class="bottom-nav">
-        <button id="nav-clockin" class="nav-btn active">
-          <span class="nav-icon">⏱️</span>
-          <span>Clock In</span>
-        </button>
-        <button id="nav-timetable" class="nav-btn">
-          <span class="nav-icon">📅</span>
-          <span>Timetable</span>
-        </button>
-      </nav>
-
     </div>
 
-  </div>
-<button id="export-csv-btn" class="btn btn-dark" style="margin-top: 10px;">
-  📥 Export All Shifts to Excel (CSV)
-</button>
-  <script src="script.js"></script>
-</body>
-</html>
+    <div id="dashboard-card" class="card hidden">
+      
+      <div class="dashboard-header">
+        <span id="welcome-msg">Welcome, Employee</span>
+        <button id="logout-btn" class="btn-text">Logout</button>
+      </div>
+
+      <nav class="tab-nav">
+        <button id="nav-clockin" class="tab-btn active">Clock In</button>
+        <button id="nav-timetable" class="tab-btn">Schedule</button>
+      </nav>
+
+      <main id="tab-clockin" class="tab-content">
+        
+        <div class="clock-box">
+          <div id="live-clock">00:00:00 AM</div>
+          <div id="status-text" class="status">Status: <strong>Clocked Out</strong></div>
+          <button id="toggle-clock-btn" class="btn btn-clock">Clock In</button>
+        </div>
+
+        <div class="logs-section">
+          <h3>Your Recent Shifts</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>In</th>
+                  <th>Out</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="logs-body">
+                </tbody>
+            </table>
+          </div>
+        </div>
+
+        </main>
+
+      <main id="tab-timetable" class="tab-content hidden">
+        
+        <div class="roster-header-box">
+          <h2 id="roster-title">Weekly Schedule</h2>
+          <span id="roster-updated" class="subtext">Updated: --</span>
+        </div>
+
+        <div class="table-container">
+          </div>
