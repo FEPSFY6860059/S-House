@@ -28,7 +28,7 @@ const navTimetable = document.getElementById("nav-timetable");
 const tabClockin = document.getElementById("tab-clockin");
 const tabTimetable = document.getElementById("tab-timetable");
 
-// Helper: Fix 1-hour timezone offset for input values
+// Helper: Fix 1-hour timezone offset for datetime-local inputs
 function toLocalISOString(dateString) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -85,7 +85,7 @@ async function setupLoggedInUser(employee) {
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
   
-  // Strict Manager Check (Role is manager AND Name is Emma)
+  // Strict Manager Check: Manager role AND name must be Emma
   const isEmma = employee.name && employee.name.trim().toLowerCase() === "emma";
   isManager = (employee.role === "manager" && isEmma);
 
@@ -95,7 +95,7 @@ async function setupLoggedInUser(employee) {
   loginCard?.classList.add("hidden");
   dashboardCard?.classList.remove("hidden");
 
-  // Remove existing manager edit box if logging in as regular staff
+  // Reset manager tool visibility
   const existingManagerSection = document.getElementById("manager-edit-section");
   if (existingManagerSection) {
     existingManagerSection.classList.add("hidden");
@@ -273,7 +273,7 @@ function renderLogs(logs) {
   });
 }
 
-// 10. MANAGER TOOLS: Edit Shifts & Export (Emma Only)
+// 10. MANAGER TOOL: Edit Staff Shifts (Emma Only)
 async function setupManagerEditTool() {
   const clockCard = document.getElementById("tab-clockin");
   let managerSection = document.getElementById("manager-edit-section");
@@ -292,17 +292,8 @@ async function setupManagerEditTool() {
       </select>
 
       <div id="mgr-shift-list-box" style="margin-top: 12px;"></div>
-
-      <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);" />
-
-      <label>Export Shift Records</label>
-      <button id="export-csv-btn" class="btn btn-dark" style="margin-top: 6px; width: 100%;">
-        📥 Export All Shifts to Excel (.csv)
-      </button>
     `;
     clockCard.appendChild(managerSection);
-
-    document.getElementById("export-csv-btn")?.addEventListener("click", exportShiftsToCSV);
   }
 
   if (managerSection) managerSection.classList.remove("hidden");
@@ -340,7 +331,6 @@ async function loadStaffShiftsForEditing(empId) {
 
   let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
   shifts.forEach(shift => {
-    // FIX: Preserves local timezone correctly
     const inISO = toLocalISOString(shift.clock_in);
     const outISO = toLocalISOString(shift.clock_out);
 
@@ -398,60 +388,6 @@ window.saveShiftEdit = async function(shiftId) {
     await loadLogs();
   }
 };
-
-// CSV EXPORT FUNCTION
-async function exportShiftsToCSV() {
-  const btn = document.getElementById("export-csv-btn");
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Generating File...";
-  }
-
-  const { data: logs, error } = await supabaseClient
-    .from("shift_logs")
-    .select("*")
-    .order("clock_in", { ascending: false });
-
-  if (error || !logs || logs.length === 0) {
-    alert("No shift logs found to export.");
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "📥 Export All Shifts to Excel (.csv)";
-    }
-    return;
-  }
-
-  const headers = ["Shift ID", "Employee ID", "Clock In", "Clock Out", "Total Hours"];
-  const csvRows = [headers.join(",")];
-
-  logs.forEach(row => {
-    const clockInStr = row.clock_in ? new Date(row.clock_in).toLocaleString() : "";
-    const clockOutStr = row.clock_out ? new Date(row.clock_out).toLocaleString() : "Active";
-
-    const line = [
-      row.id,
-      `"${row.employee_id || ''}"`,
-      `"${clockInStr}"`,
-      `"${clockOutStr}"`,
-      row.total_hours || 0
-    ];
-    csvRows.push(line.join(","));
-  });
-
-  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `S-House_Shifts_${new Date().toISOString().slice(0, 10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = "📥 Export All Shifts to Excel (.csv)";
-  }
-}
 
 // 11. Load Schedule as a Simple List
 async function loadWeeklyRoster() {
