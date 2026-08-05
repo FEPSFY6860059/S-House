@@ -28,16 +28,21 @@ const navTimetable = document.getElementById("nav-timetable");
 const tabClockin = document.getElementById("tab-clockin");
 const tabTimetable = document.getElementById("tab-timetable");
 
-// Helper: Fix timezone offset for datetime-local inputs
+// Helper: Formats local YYYY-MM-DDTHH:mm string for datetime-local inputs
 function toLocalISOString(dateString) {
   if (!dateString) return "";
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "";
 
-  // Adjust for local time offset without double-subtracting or shifting time by an hour
-  const offset = date.getTimezoneOffset() * 60000;
-  const localDate = new Date(date.getTime() - offset);
-  return localDate.toISOString().slice(0, 16);
+  const pad = (num) => String(num).padStart(2, "0");
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 // 2. Live Clock Update
@@ -267,8 +272,8 @@ function renderLogs(logs) {
     const clockOutDate = log.clock_out ? new Date(log.clock_out) : null;
 
     const dateStr = clockInDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const timeOutStr = clockOutDate ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Active";
+    const timeInStr = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const timeOutStr = clockOutDate ? clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : "Active";
     const hours = log.total_hours ? `${Number(log.total_hours).toFixed(2)} hrs` : "--";
 
     const row = document.createElement("tr");
