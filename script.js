@@ -489,7 +489,7 @@ window.saveShiftEdit = async function(shiftId) {
 };
 
 // ==========================================
-// 9. AUTOMATED SCHEDULE & ROSTER BUILDER (MULTI-EMPLOYEE SUPPORT)
+// 9. AUTOMATED SCHEDULE & ROSTER BUILDER (ENHANCED UI & MULTI-STAFF)
 // ==========================================
 async function loadWeeklyRoster() {
   const rosterTitle = document.getElementById("roster-title");
@@ -510,12 +510,12 @@ async function loadWeeklyRoster() {
 
   const rawText = roster.image_url || "";
   if (!rawText.trim()) {
-    tableContainer.innerHTML = `<p style="text-align:center; padding: 20px;">No schedule posted yet.</p>`;
+    tableContainer.innerHTML = `<p style="text-align:center; padding: 20px; color: #64748b;">No schedule posted yet.</p>`;
     return;
   }
 
   const lines = rawText.split("\n");
-  let listHTML = `<div style="display: flex; flex-direction: column; gap: 12px; padding: 10px 0;">`;
+  let listHTML = `<div style="display: flex; flex-direction: column; gap: 10px; padding: 10px 0;">`;
 
   lines.forEach(line => {
     if (!line.trim()) return;
@@ -526,13 +526,13 @@ async function loadWeeklyRoster() {
       const shifts = parts.slice(1).join(":").trim();
 
       listHTML += `
-        <div style="background: #faf8f5; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;">
-          <strong style="color: #3a403d; font-size: 15px; display: block; margin-bottom: 6px;">${day}</strong>
-          <span style="color: #64748b; font-size: 14px; line-height: 1.5; white-space: pre-line;">${shifts || "No shifts"}</span>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <strong style="color: #0f172a; font-size: 15px; display: block; margin-bottom: 4px;">${day}</strong>
+          <span style="color: #475569; font-size: 14px; line-height: 1.5; white-space: pre-line;">${shifts || "Off / Unassigned"}</span>
         </div>
       `;
     } else {
-      listHTML += `<p style="font-weight: 600; margin: 4px 0; color: #3a403d;">${line}</p>`;
+      listHTML += `<p style="font-weight: 600; margin: 4px 0; color: #0f172a;">${line}</p>`;
     }
   });
 
@@ -540,41 +540,42 @@ async function loadWeeklyRoster() {
   tableContainer.innerHTML = listHTML;
 }
 
-// Dynamic Manager Schedule Generator (Supports Multiple Employees Per Day)
 async function setupRosterBuilderUI() {
   const adminBox = document.getElementById("admin-schedule-box");
   if (!adminBox || !isManager) return;
 
   adminBox.classList.remove("hidden");
 
-  // Fetch employees from Supabase
+  // Fetch staff list from Supabase
   const { data: employees } = await supabaseClient.from("employees").select("name");
   window.currentStaffList = employees ? employees.map(e => e.name) : [];
 
   const { weekTitle, formattedDays } = getWeekDates(0);
 
   adminBox.innerHTML = `
-    <h4>Manager Schedule Builder</h4>
+    <h4 style="margin-bottom: 12px; color: #0f172a; font-size: 18px;">Manager Schedule Builder</h4>
     
-    <label for="week-select">Select Week:</label>
-    <select id="week-select" style="margin-bottom: 12px; padding: 6px; width: 100%;">
-      <option value="0">Current Week</option>
-      <option value="1">Next Week</option>
-      <option value="2">2 Weeks Ahead</option>
-    </select>
+    <div style="margin-bottom: 16px;">
+      <label for="week-select" style="display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px;">Select Week Range:</label>
+      <select id="week-select" style="width: 100%;">
+        <option value="0">Current Week</option>
+        <option value="1">Next Week</option>
+        <option value="2">2 Weeks Ahead</option>
+      </select>
+    </div>
 
-    <div style="margin-bottom: 12px;">
-      <strong id="auto-week-title" style="font-size: 16px; color: var(--primary);">${weekTitle}</strong>
+    <div style="margin-bottom: 16px; background: #e0f2fe; border: 1px solid #bae6fd; padding: 10px 14px; border-radius: 8px;">
+      <strong id="auto-week-title" style="font-size: 15px; color: #0369a1;">${weekTitle}</strong>
     </div>
 
     <div id="days-builder-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
 
-    <button id="publish-roster-btn" class="btn" style="margin-top: 16px;">Publish Schedule</button>
+    <button id="publish-roster-btn" class="btn" style="margin-top: 20px; width: 100%;">Publish Schedule</button>
   `;
 
   renderDayInputs(formattedDays, window.currentStaffList);
 
-  // Auto-update dates when manager switches weeks
+  // Auto-update dates when switching weeks
   document.getElementById("week-select").addEventListener("change", (e) => {
     const selectedOffset = parseInt(e.target.value);
     const updated = getWeekDates(selectedOffset);
@@ -582,7 +583,7 @@ async function setupRosterBuilderUI() {
     renderDayInputs(updated.formattedDays, window.currentStaffList);
   });
 
-  // Handle Publishing
+  // Handle Publish action
   document.getElementById("publish-roster-btn").addEventListener("click", () => publishGeneratedRoster());
 }
 
@@ -593,13 +594,13 @@ function renderDayInputs(days, staffList) {
   let html = "";
   days.forEach((dayLabel, dayIndex) => {
     html += `
-      <div class="day-schedule-card" data-day="${dayLabel}" style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:15px; color:#3a403d;">${dayLabel}</strong>
-          <button type="button" class="btn btn-small" style="padding:2px 8px; font-size:12px;" onclick="addStaffToDay(${dayIndex})">+ Add Staff</button>
+      <div class="day-schedule-card" data-day="${dayLabel}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <strong style="font-size: 14px; color: #0f172a;">${dayLabel}</strong>
+          <button type="button" class="btn-add-staff" onclick="addStaffToDay(${dayIndex})">+ Add Staff</button>
         </div>
         
-        <div id="staff-rows-day-${dayIndex}" style="display:flex; flex-direction:column; gap:6px;">
+        <div id="staff-rows-day-${dayIndex}" style="display: flex; flex-direction: column; gap: 6px;">
           ${createStaffRowHTML(dayIndex, 0, staffList)}
         </div>
       </div>
@@ -610,13 +611,13 @@ function renderDayInputs(days, staffList) {
 
 function createStaffRowHTML(dayIndex, rowIdx, staffList) {
   return `
-    <div class="staff-shift-row" style="display:flex; gap:6px; align-items:center;">
-      <select class="shift-staff-select" style="padding:4px; min-width:120px;">
+    <div class="staff-shift-row">
+      <select class="shift-staff-select" style="min-width: 130px;">
         <option value="">-- Employee --</option>
         ${staffList.map(name => `<option value="${name}">${name}</option>`).join('')}
       </select>
-      <input type="text" class="shift-time-input" placeholder="e.g. 8:00 AM - 4:00 PM" style="flex:1; padding:4px;" />
-      ${rowIdx > 0 ? `<button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">✕</button>` : ''}
+      <input type="text" class="shift-time-input" placeholder="e.g. 8:00 AM - 4:00 PM" style="flex: 1;" />
+      ${rowIdx > 0 ? `<button type="button" class="btn-remove-row" onclick="this.parentElement.remove()">✕</button>` : ''}
     </div>
   `;
 }
