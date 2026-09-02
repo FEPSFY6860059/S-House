@@ -4,7 +4,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Paste your Google Sheets Web App URL here:
-const GOOGLE_DOC_WEBAPP_URL = https://script.google.com/macros/s/AKfycbxVmjKi6rh2kF4ACvyFOr8VttZyOhUX7NhrdF20Kvi66wVlNEhs7lavuTAyPJZJcRDPpQ/exec ;
+const GOOGLE_DOC_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxVmjKi6rh2kF4ACvyFOr8VttZyOhUX7NhrdF20Kvi66wVlNEhs7lavuTAyPJZJcRDPpQ/exec";
 
 // State Variables
 let currentEmployee = null;
