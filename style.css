@@ -220,20 +220,22 @@ th {
   color: var(--text-muted);
 }
 
+/* Universal Input & Select Overrides */
 input[type="text"], 
 textarea, 
 select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: var(--item-bg);
+  background-color: #ffffff;
   box-sizing: border-box;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-dark);
   outline: none;
   transition: border-color 0.2s ease;
+  -webkit-text-fill-color: var(--text-dark);
 }
 
 input[type="text"]:focus, 
@@ -332,7 +334,7 @@ select:focus {
   width: auto;
 }
 
-/* Manager Schedule Builder Custom Layout */
+/* Manager Schedule Builder Mobile & Desktop Layout */
 .day-schedule-card {
   background: var(--item-bg);
   border: 1px solid var(--border);
@@ -347,9 +349,43 @@ select:focus {
 
 .staff-shift-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
-  margin-top: 6px;
+  margin-top: 8px;
+}
+
+/* Enlarged Input for Time Entry */
+.shift-time-input,
+.day-schedule-card input[type="text"] {
+  background-color: #ffffff !important;
+  color: var(--text-dark) !important;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px !important;
+  font-size: 16px !important;
+  font-weight: 600;
+  min-height: 44px;
+  flex: 2 !important;
+  box-sizing: border-box;
+  -webkit-text-fill-color: var(--text-dark) !important;
+}
+
+.shift-time-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* Matching Employee Selection Dropdown Height */
+.shift-staff-select {
+  background-color: #ffffff !important;
+  color: var(--text-dark) !important;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 10px !important;
+  font-size: 14px;
+  min-height: 44px;
+  flex: 1;
+  box-sizing: border-box;
 }
 
 .btn-add-staff {
@@ -357,8 +393,8 @@ select:focus {
   color: var(--text-dark);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 11px;
+  padding: 6px 12px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s ease;
@@ -372,16 +408,17 @@ select:focus {
   background: #fbebee;
   color: #c94a53;
   border: 1px solid #f2cdd2;
-  border-radius: 6px;
-  width: 28px;
-  height: 28px;
+  border-radius: 8px;
+  width: 36px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 14px;
   transition: background 0.2s ease;
+  flex-shrink: 0;
 }
 
 .btn-remove-row:hover {
