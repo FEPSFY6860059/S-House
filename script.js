@@ -489,7 +489,7 @@ window.saveShiftEdit = async function(shiftId) {
 };
 
 // ==========================================
-// 9. AUTOMATED SCHEDULE & ROSTER BUILDER
+// 9. AUTOMATED SCHEDULE & ROSTER BUILDER (MULTI-EMPLOYEE SUPPORT)
 // ==========================================
 async function loadWeeklyRoster() {
   const rosterTitle = document.getElementById("roster-title");
@@ -528,7 +528,7 @@ async function loadWeeklyRoster() {
       listHTML += `
         <div style="background: #faf8f5; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;">
           <strong style="color: #3a403d; font-size: 15px; display: block; margin-bottom: 6px;">${day}</strong>
-          <span style="color: #64748b; font-size: 14px; line-height: 1.4;">${shifts || "No shifts"}</span>
+          <span style="color: #64748b; font-size: 14px; line-height: 1.5; white-space: pre-line;">${shifts || "No shifts"}</span>
         </div>
       `;
     } else {
@@ -540,16 +540,16 @@ async function loadWeeklyRoster() {
   tableContainer.innerHTML = listHTML;
 }
 
-// Dynamic Manager Schedule Generator
+// Dynamic Manager Schedule Generator (Supports Multiple Employees Per Day)
 async function setupRosterBuilderUI() {
   const adminBox = document.getElementById("admin-schedule-box");
   if (!adminBox || !isManager) return;
 
   adminBox.classList.remove("hidden");
 
-  // Fetch employees from Supabase to create selection dropdowns
+  // Fetch employees from Supabase
   const { data: employees } = await supabaseClient.from("employees").select("name");
-  const staffList = employees ? employees.map(e => e.name) : [];
+  window.currentStaffList = employees ? employees.map(e => e.name) : [];
 
   const { weekTitle, formattedDays } = getWeekDates(0);
 
@@ -567,19 +567,19 @@ async function setupRosterBuilderUI() {
       <strong id="auto-week-title" style="font-size: 16px; color: var(--primary);">${weekTitle}</strong>
     </div>
 
-    <div id="days-builder-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    <div id="days-builder-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
 
     <button id="publish-roster-btn" class="btn" style="margin-top: 16px;">Publish Schedule</button>
   `;
 
-  renderDayInputs(formattedDays, staffList);
+  renderDayInputs(formattedDays, window.currentStaffList);
 
   // Auto-update dates when manager switches weeks
   document.getElementById("week-select").addEventListener("change", (e) => {
     const selectedOffset = parseInt(e.target.value);
     const updated = getWeekDates(selectedOffset);
     document.getElementById("auto-week-title").textContent = updated.weekTitle;
-    renderDayInputs(updated.formattedDays, staffList);
+    renderDayInputs(updated.formattedDays, window.currentStaffList);
   });
 
   // Handle Publishing
@@ -591,36 +591,71 @@ function renderDayInputs(days, staffList) {
   if (!container) return;
 
   let html = "";
-  days.forEach((dayLabel, index) => {
+  days.forEach((dayLabel, dayIndex) => {
     html += `
-      <div style="display: flex; gap: 8px; align-items: center; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #ddd; flex-wrap: wrap;">
-        <span style="min-width: 140px; font-weight: 600;">${dayLabel}:</span>
-        <input type="text" id="shift-time-${index}" placeholder="e.g. 8:00 AM - 4:00 PM" style="flex: 1; min-width: 150px; padding: 4px;" />
-        <select id="shift-staff-${index}" style="padding: 4px; min-width: 130px;">
-          <option value="">-- Unassigned --</option>
-          ${staffList.map(name => `<option value="${name}">${name}</option>`).join('')}
-        </select>
+      <div class="day-schedule-card" data-day="${dayLabel}" style="background:#fff; padding:12px; border-radius:8px; border:1px solid #ddd;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:15px; color:#3a403d;">${dayLabel}</strong>
+          <button type="button" class="btn btn-small" style="padding:2px 8px; font-size:12px;" onclick="addStaffToDay(${dayIndex})">+ Add Staff</button>
+        </div>
+        
+        <div id="staff-rows-day-${dayIndex}" style="display:flex; flex-direction:column; gap:6px;">
+          ${createStaffRowHTML(dayIndex, 0, staffList)}
+        </div>
       </div>
     `;
   });
   container.innerHTML = html;
 }
 
+function createStaffRowHTML(dayIndex, rowIdx, staffList) {
+  return `
+    <div class="staff-shift-row" style="display:flex; gap:6px; align-items:center;">
+      <select class="shift-staff-select" style="padding:4px; min-width:120px;">
+        <option value="">-- Employee --</option>
+        ${staffList.map(name => `<option value="${name}">${name}</option>`).join('')}
+      </select>
+      <input type="text" class="shift-time-input" placeholder="e.g. 8:00 AM - 4:00 PM" style="flex:1; padding:4px;" />
+      ${rowIdx > 0 ? `<button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">✕</button>` : ''}
+    </div>
+  `;
+}
+
+window.addStaffToDay = function(dayIndex) {
+  const dayRowsContainer = document.getElementById(`staff-rows-day-${dayIndex}`);
+  if (!dayRowsContainer) return;
+  const newRowIndex = dayRowsContainer.children.length;
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = createStaffRowHTML(dayIndex, newRowIndex, window.currentStaffList || []);
+  dayRowsContainer.appendChild(tempDiv.firstElementChild);
+};
+
 async function publishGeneratedRoster() {
   const weekTitle = document.getElementById("auto-week-title").textContent;
-  const daysContainer = document.getElementById("days-builder-container");
-  const rows = daysContainer.querySelectorAll("div");
+  const dayCards = document.querySelectorAll(".day-schedule-card");
 
   let contentLines = [];
-  rows.forEach((row, index) => {
-    const dayText = row.querySelector("span").textContent;
-    const timeVal = document.getElementById(`shift-time-${index}`).value.trim();
-    const staffVal = document.getElementById(`shift-staff-${index}`).value;
 
-    if (timeVal || staffVal) {
-      contentLines.push(`${dayText}: ${staffVal ? staffVal + " (" + timeVal + ")" : timeVal}`);
+  dayCards.forEach(card => {
+    const dayLabel = card.getAttribute("data-day");
+    const rows = card.querySelectorAll(".staff-shift-row");
+    let dayEntries = [];
+
+    rows.forEach(row => {
+      const staffVal = row.querySelector(".shift-staff-select").value;
+      const timeVal = row.querySelector(".shift-time-input").value.trim();
+
+      if (staffVal && timeVal) {
+        dayEntries.push(`${staffVal} (${timeVal})`);
+      } else if (staffVal) {
+        dayEntries.push(`${staffVal}`);
+      }
+    });
+
+    if (dayEntries.length > 0) {
+      contentLines.push(`${dayLabel}: ${dayEntries.join(", ")}`);
     } else {
-      contentLines.push(`${dayText}: Off / Unassigned`);
+      contentLines.push(`${dayLabel}: Off / Unassigned`);
     }
   });
 
