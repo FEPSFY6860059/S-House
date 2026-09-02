@@ -3,6 +3,9 @@ const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Google Apps Script Web App Endpoint URL (Leave as "" if not yet generated)
+const GOOGLE_DOC_WEBAPP_URL = "";
+
 // State Variables
 let currentEmployee = null;
 let currentEmployeeName = "";
@@ -43,6 +46,12 @@ function toLocalISOString(dateString) {
   const minutes = pad(date.getMinutes());
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Helper: Calculates rounded shift duration to nearest 15 mins (e.g. 12:30 - 15:00 = 2.50)
+function calculateRoundedHours(clockInDate, clockOutDate) {
+  const diffInMinutes = (clockOutDate - clockInDate) / (1000 * 60);
+  return (Math.round(diffInMinutes / 15) * 0.25).toFixed(2);
 }
 
 // 2. Live Clock Update
@@ -129,19 +138,24 @@ if (loginForm) {
 
     if (!enteredId) return;
 
-    const { data: employee, error } = await supabaseClient
-      .from("employees")
-      .select("*")
-      .eq("id", enteredId)
-      .maybeSingle();
+    try {
+      const { data: employee, error } = await supabaseClient
+        .from("employees")
+        .select("*")
+        .eq("id", enteredId)
+        .maybeSingle();
 
-    if (error || !employee) {
-      alert("Unauthorized: Invalid Employee ID.");
-      employeeIdInput.value = "";
-      return;
+      if (error || !employee) {
+        alert("Unauthorized: Invalid Employee ID.");
+        employeeIdInput.value = "";
+        return;
+      }
+
+      await setupLoggedInUser(employee);
+    } catch (err) {
+      console.error("Login error:", err);
+      alert("Error logging in. Check console.");
     }
-
-    await setupLoggedInUser(employee);
   });
 }
 
@@ -217,12 +231,32 @@ if (toggleClockBtn) {
 
       if (shift) {
         const clockInTime = new Date(shift.clock_in);
-        const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(2);
+        const roundedHours = calculateRoundedHours(clockInTime, now);
 
+        // Update database record
         await supabaseClient
           .from("shift_logs")
-          .update({ clock_out: now.toISOString(), total_hours: hoursWorked })
+          .update({ clock_out: now.toISOString(), total_hours: roundedHours })
           .eq("id", activeShiftId);
+
+        // Safe Google Docs payload trigger
+        if (GOOGLE_DOC_WEBAPP_URL && GOOGLE_DOC_WEBAPP_URL.trim() !== "") {
+          try {
+            fetch(GOOGLE_DOC_WEBAPP_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                employee_id: currentEmployee,
+                clock_in: clockInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+                clock_out: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+                total_hours: roundedHours
+              })
+            }).catch(err => console.error("Google Doc log payload failed:", err));
+          } catch (e) {
+            console.error("Google Doc request skipped:", e);
+          }
+        }
       }
 
       activeShiftId = null;
@@ -378,7 +412,7 @@ window.saveShiftEdit = async function(shiftId) {
       alert("Clock-out time must be after clock-in time.");
       return;
     }
-    totalHours = ((clockOut - clockIn) / (1000 * 60 * 60)).toFixed(2);
+    totalHours = calculateRoundedHours(clockIn, clockOut);
   }
 
   const { error } = await supabaseClient
