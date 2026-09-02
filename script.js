@@ -3,8 +3,8 @@ const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Google Apps Script Web App Endpoint URL (Leave as "" if not yet generated)
-const GOOGLE_DOC_WEBAPP_URL = "";
+// Paste your Google Sheets Web App URL here:
+const GOOGLE_DOC_WEBAPP_URL = https://script.google.com/macros/s/AKfycbxVmjKi6rh2kF4ACvyFOr8VttZyOhUX7NhrdF20Kvi66wVlNEhs7lavuTAyPJZJcRDPpQ/exec ;
 
 // State Variables
 let currentEmployee = null;
@@ -154,7 +154,7 @@ if (loginForm) {
       await setupLoggedInUser(employee);
     } catch (err) {
       console.error("Login error:", err);
-      alert("Error logging in. Check console.");
+      alert("Error logging in.");
     }
   });
 }
@@ -233,13 +233,13 @@ if (toggleClockBtn) {
         const clockInTime = new Date(shift.clock_in);
         const roundedHours = calculateRoundedHours(clockInTime, now);
 
-        // Update database record
+        // Update Supabase database record
         await supabaseClient
           .from("shift_logs")
           .update({ clock_out: now.toISOString(), total_hours: roundedHours })
           .eq("id", activeShiftId);
 
-        // Safe Google Docs payload trigger
+        // Send real-time payload to Google Sheets
         if (GOOGLE_DOC_WEBAPP_URL && GOOGLE_DOC_WEBAPP_URL.trim() !== "") {
           try {
             fetch(GOOGLE_DOC_WEBAPP_URL, {
@@ -252,9 +252,9 @@ if (toggleClockBtn) {
                 clock_out: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
                 total_hours: roundedHours
               })
-            }).catch(err => console.error("Google Doc log payload failed:", err));
+            }).catch(err => console.error("Google Sheets payload failed:", err));
           } catch (e) {
-            console.error("Google Doc request skipped:", e);
+            console.error("Google Sheets request skipped:", e);
           }
         }
       }
