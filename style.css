@@ -5,7 +5,8 @@
   --primary: #708d81;        /* Muted Sage Green */
   --primary-hover: #5c756a;
   --accent-rose: #d89a9e;    /* Muted Dusty Rose */
-  --text-dark: #3a403d;      /* Soft charcoal text (no harsh pure black) */
+  --accent-rose-hover: #c48387;
+  --text-dark: #3a403d;      /* Soft charcoal text */
   --text-muted: #828c85;     /* Muted sage grey */
   --border: #e6e2d8;        /* Soft warm border */
   --item-bg: #faf8f5;       /* Card list background */
@@ -111,6 +112,11 @@ body {
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.btn-logout:hover {
+  background: #ded9cd;
 }
 
 /* Cards */
@@ -150,12 +156,16 @@ body {
   transition: background-color 0.2s;
 }
 
-.btn:active {
+.btn:active, .btn:hover {
   background-color: var(--primary-hover);
 }
 
 .btn-clock.clocked-in {
   background-color: var(--accent-rose);
+}
+
+.btn-clock.clocked-in:hover {
+  background-color: var(--accent-rose-hover);
 }
 
 .btn-dark {
@@ -195,6 +205,12 @@ th {
   border-top: 2px dashed var(--border);
 }
 
+.admin-box h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: var(--text-dark);
+}
+
 .admin-box label {
   font-size: 12px;
   font-weight: 700;
@@ -204,9 +220,11 @@ th {
   color: var(--text-muted);
 }
 
-input[type="text"], textarea {
+input[type="text"], 
+textarea, 
+select {
   width: 100%;
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--item-bg);
@@ -214,7 +232,14 @@ input[type="text"], textarea {
   font-family: inherit;
   font-size: 13px;
   color: var(--text-dark);
-  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus, 
+textarea:focus, 
+select:focus {
+  border-color: var(--primary);
 }
 
 /* Navigation Bar */
@@ -255,6 +280,7 @@ input[type="text"], textarea {
 .nav-btn.active {
   color: var(--primary);
 }
+
 /* Manager Edit Shift Form */
 .edit-shift-box {
   background: var(--item-bg);
@@ -303,4 +329,61 @@ input[type="text"], textarea {
   padding: 8px 12px;
   font-size: 12px;
   border-radius: 8px;
+  width: auto;
+}
+
+/* Manager Schedule Builder Custom Layout */
+.day-schedule-card {
+  background: var(--item-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  transition: all 0.2s ease;
+}
+
+.day-schedule-card:hover {
+  border-color: #d2cebf;
+}
+
+.staff-shift-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.btn-add-staff {
+  background: #e8e4da;
+  color: var(--text-dark);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-add-staff:hover {
+  background: #ded9cd;
+}
+
+.btn-remove-row {
+  background: #fbebee;
+  color: #c94a53;
+  border: 1px solid #f2cdd2;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: background 0.2s ease;
+}
+
+.btn-remove-row:hover {
+  background: #f7d6dc;
 }
