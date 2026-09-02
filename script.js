@@ -4,7 +4,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Google Apps Script Web App Endpoint URL
-const GOOGLE_DOC_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx1JaCA1cPjN_9vhKUt4tjmRS59IVUXKkvIIjr6R8u8iqLZiYHQOwttJPemIXwCmv16TQ/exec";
+const GOOGLE_DOC_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwS7pTDh9Hn2qfBOM0uAD6oki3qmzIdROlYOU-1IBONWbUDF2fKtlBthBjKHw4yz45Esw/exec";
 
 // State Variables
 let currentEmployee = null;
