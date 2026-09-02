@@ -2,118 +2,119 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>S-House - Team Portal</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>S-House Shift Tracker</title>
+  
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Cache-busting CSS stylesheet import -->
+  <link rel="stylesheet" href="style.css?v=3" />
+  
+  <!-- Cache-busting JavaScript file import -->
+  <script src="script.js?v=3" defer></script>
 </head>
 <body>
 
   <div class="app-container">
-    
-    <main id="login-card" class="card">
+
+    <!-- ========================================== -->
+    <!-- 1. LOGIN CARD                              -->
+    <!-- ========================================== -->
+    <div id="login-card" class="card">
       <div class="brand-logo">
-        <div class="logo-icon">🏠</div>
+        <div class="logo-icon">S</div>
         <div class="logo-text">S-House</div>
       </div>
-      <h2>Team Login</h2>
-      <p class="subtext">Enter your Employee ID to access your workspace.</p>
       
       <form id="login-form">
-        <label for="employee-id">Employee ID</label>
-        <input 
-          type="text" 
-          id="employee-id" 
-          placeholder="e.g. EMP001" 
-          required 
-          autocomplete="off"
-        />
-        <button type="submit" class="btn">Log In</button>
+        <label for="employee-id" style="display:block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">Employee ID</label>
+        <input type="text" id="employee-id" placeholder="Enter your ID..." required />
+        <button type="submit" class="btn" style="margin-top: 10px;">Sign In</button>
       </form>
-    </main>
+    </div>
 
-    <div id="dashboard-card" class="hidden">
+    <!-- ========================================== -->
+    <!-- 2. MAIN DASHBOARD CARD                     -->
+    <!-- ========================================== -->
+    <div id="dashboard-card" class="card hidden">
       
-      <header class="app-header">
+      <!-- Top App Header -->
+      <div class="app-header">
         <div class="header-brand">
-          <span class="header-logo-icon">🏠</span>
-          <span class="header-title">S-House</span>
+          <div class="header-logo-icon">S</div>
+          <div class="header-title">S-House</div>
         </div>
         <div class="user-menu">
           <span id="welcome-msg">Welcome</span>
           <button id="logout-btn" class="btn-logout">Logout</button>
         </div>
-      </header>
+      </div>
 
-      <main id="tab-clockin" class="tab-content card clock-card">
-        <p id="status-text">Status: <strong>Clocked Out</strong></p>
-        <h1 id="live-clock">--:--:--</h1>
-        
-        <button id="toggle-clock-btn" class="btn btn-clock">Clock In</button>
-
-        <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border);" />
-
-        <h4 style="text-align: left; margin-bottom: 10px;">Recent Shifts</h4>
-        <table>
-          <thead>
-            <tr>
-              <th style="text-align: left;">Date</th>
-              <th>In</th>
-              <th>Out</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="logs-body">
-            </tbody>
-        </table>
-      </main>
-
-      <main id="tab-timetable" class="tab-content hidden">
-        <div class="card schedule-card">
-          <h3 id="roster-title">Weekly Schedule</h3>
-          <p id="roster-updated" class="subtext">Loading schedule...</p>
-
-          <div class="table-container">
-            </div>
-
-          <div id="admin-schedule-box" class="admin-box hidden"></div>
-            <h4>Manager Tool: Update Schedule</h4>
-            
-            <label for="admin-title-input">Week Title</label>
-            <input 
-              type="text" 
-              id="admin-title-input" 
-              placeholder="e.g. July 27 - Aug 2" 
-            />
-
-            <label for="admin-content-input">Schedule Input</label>
-            <textarea 
-              id="admin-content-input" 
-              rows="6" 
-              placeholder="Mon: Emma (8:30) Kelly (10:30-3:30)&#10;Tue: Kelly (8:30-2:30) Bella (10:30-3:30)&#10;Wed: Bella (8:30-2:30) Izzie (10:30-2:30)&#10;Thu: Emma (10:30) Melissa (10:30-3:00)&#10;Fri: Kelly (8:30-2:30) Jacob (10:30-2:30)&#10;Sat: Closed"
-            ></textarea>
-
-            <button id="publish-roster-btn" class="btn btn-dark">Publish Schedule</button>
-          </div>
+      <!-- TAB 1: CLOCK IN / SHIFT LOGS -->
+      <div id="tab-clockin">
+        <div class="clock-card">
+          <div id="live-clock">00:00:00</div>
+          <p id="status-text" class="subtext">Status: <strong>Clocked Out</strong></p>
+          <button id="toggle-clock-btn" class="btn btn-clock" style="margin-top: 14px;">Clock In</button>
         </div>
-      </main>
 
-      <nav class="bottom-nav">
-        <button id="nav-clockin" class="nav-btn active">
-          <span class="nav-icon">⏱️</span>
-          <span>Clock In</span>
-        </button>
-        <button id="nav-timetable" class="nav-btn">
-          <span class="nav-icon">📅</span>
-          <span>Timetable</span>
-        </button>
-      </nav>
+        <div style="margin-top: 24px;">
+          <h4 style="margin-bottom: 10px;">Your Shift History</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>In</th>
+                <th>Out</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="logs-body">
+              <tr>
+                <td colspan="4" style="text-align:center;">Loading logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Container for Manager Edit Shifts Tool (Injected via script.js for Manager only) -->
+        <div id="manager-edit-section" class="hidden"></div>
+      </div>
+
+      <!-- TAB 2: WEEKLY SCHEDULE & MANAGER BUILDER -->
+      <div id="tab-timetable" class="hidden">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <h3 id="roster-title" style="margin: 0 0 4px 0;">Weekly Schedule</h3>
+          <span id="roster-updated" class="subtext">Select a week to view</span>
+        </div>
+
+        <!-- Schedule Container -->
+        <div class="table-container">
+          <p style="text-align:center; padding: 20px;">Loading schedule...</p>
+        </div>
+
+        <!-- Clean Dynamic Container for Manager Schedule Builder -->
+        <div id="admin-schedule-box" class="admin-box hidden"></div>
+      </div>
 
     </div>
 
+    <!-- ========================================== -->
+    <!-- 3. BOTTOM NAVIGATION BAR                   -->
+    <!-- ========================================== -->
+    <nav class="bottom-nav">
+      <button id="nav-clockin" class="nav-btn active">
+        <span class="nav-icon">⏱</span>
+        <span>Clock In</span>
+      </button>
+      <button id="nav-timetable" class="nav-btn">
+        <span class="nav-icon">📅</span>
+        <span>Schedule</span>
+      </button>
+    </nav>
+
   </div>
 
-  <script src="script.js"></script>
 </body>
 </html>
