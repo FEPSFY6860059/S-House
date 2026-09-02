@@ -137,8 +137,8 @@ async function autoLogin() {
 async function setupLoggedInUser(employee) {
   currentEmployee = employee.id;
   currentEmployeeName = employee.name;
-  
-  // Strict Manager Check: Manager role AND name must be Emma
+
+  // Strict Manager Check: Manager role AND case-insensitive check for Emma
   const isEmma = employee.name && employee.name.trim().toLowerCase() === "emma";
   isManager = (employee.role === "manager" && isEmma);
 
@@ -148,20 +148,29 @@ async function setupLoggedInUser(employee) {
   loginCard?.classList.add("hidden");
   dashboardCard?.classList.remove("hidden");
 
-  // Reset manager tool visibility
-  const existingManagerSection = document.getElementById("manager-edit-section");
-  if (existingManagerSection) {
-    existingManagerSection.classList.add("hidden");
+  // Get admin elements
+  const adminBox = document.getElementById("admin-schedule-box");
+  const managerSection = document.getElementById("manager-edit-section");
+
+  if (isManager) {
+    // Show and initialize manager features
+    await setupManagerEditTool();
+    await setupRosterBuilderUI();
+  } else {
+    // Completely clear and hide manager features for regular employees
+    if (adminBox) {
+      adminBox.classList.add("hidden");
+      adminBox.innerHTML = "";
+    }
+    if (managerSection) {
+      managerSection.classList.add("hidden");
+      managerSection.innerHTML = "";
+    }
   }
 
   await checkActiveShift();
   await loadLogs();
   await loadWeeklyRoster();
-
-  if (isManager) {
-    await setupManagerEditTool();
-    await setupRosterBuilderUI();
-  }
 }
 
 autoLogin();
