@@ -1,17 +1,21 @@
-// 1. Initialize Supabase Client
+// ==========================================
+// 1. CONSTANTS & INITIALIZATION
+// ==========================================
 const SUPABASE_URL = "https://gcwcaqxrhlqkpfyybhjk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2NhcXhyaGxxa3BmeXliaGprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mjc4MDgsImV4cCI6MjEwMDUwMzgwOH0.IyjAoye6StGXpaZ1G3En-7X1ku-Ndwu72dOC4Ne_Vno";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Google Apps Script Web App Endpoint URL
-const GOOGLE_DOC_WEBAPP_URL = "https://script.google.com/macros/s/AKfycby10QUdX5pNicEL1NWEFORhQ98BjY2agqaf9DE5h1sDVAEkntIv5XBEh1K8s5jc4xETRA/exec";
-// State Variables
+const GOOGLE_DOC_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxVmjKi6rh2kF4ACvyFOr8VttZyOhUX7NhrdF20Kvi66wVlNEhs7lavuTAyPJZJcRDPpQ/exec";
+
+// ==========================================
+// 2. STATE VARIABLES & DOM ELEMENTS
+// ==========================================
 let currentEmployee = null;
 let currentEmployeeName = "";
 let isManager = false;
 let activeShiftId = null;
 
-// DOM Elements
 const loginForm = document.getElementById("login-form");
 const employeeIdInput = document.getElementById("employee-id");
 const loginCard = document.getElementById("login-card");
@@ -24,11 +28,14 @@ const toggleClockBtn = document.getElementById("toggle-clock-btn");
 const statusText = document.getElementById("status-text");
 const logsBody = document.getElementById("logs-body");
 
-// Navigation Elements
 const navClockin = document.getElementById("nav-clockin");
 const navTimetable = document.getElementById("nav-timetable");
 const tabClockin = document.getElementById("tab-clockin");
 const tabTimetable = document.getElementById("tab-timetable");
+
+// ==========================================
+// 3. UTILITY & HELPER FUNCTIONS
+// ==========================================
 
 // Helper: Formats local YYYY-MM-DDTHH:mm string for datetime-local inputs
 function toLocalISOString(dateString) {
@@ -53,13 +60,40 @@ function calculateRoundedHours(clockInDate, clockOutDate) {
   return (Math.round(diffInMinutes / 15) * 0.25).toFixed(2);
 }
 
-// 2. Live Clock Update
+// Helper: Generates Monday to Sunday date range strings automatically
+function getWeekDates(offsetWeeks = 0) {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 is Sun, 1 is Mon...
+  const distanceToMon = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+  
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + distanceToMon + (offsetWeeks * 7));
+  
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const formatOptions = { month: 'short', day: 'numeric' };
+  const weekTitle = `Week of ${monday.toLocaleDateString(undefined, formatOptions)} - ${sunday.toLocaleDateString(undefined, formatOptions)}`;
+
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const formattedDays = days.map((day, index) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + index);
+    return `${day} (${d.toLocaleDateString(undefined, formatOptions)})`;
+  });
+
+  return { weekTitle, formattedDays };
+}
+
+// Live Clock Update
 setInterval(() => {
   const now = new Date();
   if (liveClock) liveClock.textContent = now.toLocaleTimeString();
 }, 1000);
 
-// 3. Tab Switcher
+// ==========================================
+// 4. NAVIGATION & TAB SWITCHER
+// ==========================================
 if (navClockin && navTimetable) {
   navClockin.addEventListener("click", () => switchTab("clockin"));
   navTimetable.addEventListener("click", () => switchTab("timetable"));
@@ -79,7 +113,9 @@ function switchTab(tabName) {
   }
 }
 
-// 4. Auto-Login Memory
+// ==========================================
+// 5. AUTHENTICATION & LOGIN MANAGEMENT
+// ==========================================
 async function autoLogin() {
   const savedEmployeeId = localStorage.getItem("shouse_employee_id");
 
@@ -124,12 +160,12 @@ async function setupLoggedInUser(employee) {
 
   if (isManager) {
     await setupManagerEditTool();
+    await setupRosterBuilderUI();
   }
 }
 
 autoLogin();
 
-// 5. Login Form Handler
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -158,7 +194,6 @@ if (loginForm) {
   });
 }
 
-// 6. Logout Handler
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("shouse_employee_id");
@@ -176,7 +211,9 @@ if (logoutBtn) {
   });
 }
 
-// 7. Active Shift Verification
+// ==========================================
+// 6. SHIFT MANAGEMENT & CLOCK SYSTEM
+// ==========================================
 async function checkActiveShift() {
   const { data } = await supabaseClient
     .from("shift_logs")
@@ -194,7 +231,6 @@ async function checkActiveShift() {
   }
 }
 
-// 8. Clock In / Out Action Handler
 if (toggleClockBtn) {
   toggleClockBtn.addEventListener("click", async () => {
     const now = new Date();
@@ -203,13 +239,30 @@ if (toggleClockBtn) {
     if (!activeShiftId) {
       toggleClockBtn.textContent = "Clocking In...";
 
+      // Check for active shifts before inserting to prevent conflict
+      const { data: existingShift } = await supabaseClient
+        .from("shift_logs")
+        .select("id")
+        .eq("employee_id", currentEmployee)
+        .is("clock_out", null)
+        .maybeSingle();
+
+      if (existingShift) {
+        activeShiftId = existingShift.id;
+        updateClockUI(true);
+        toggleClockBtn.disabled = false;
+        alert("You are already clocked in!");
+        return;
+      }
+
       const { data, error } = await supabaseClient
         .from("shift_logs")
         .insert([{ employee_id: currentEmployee, clock_in: now.toISOString() }])
         .select();
 
       if (error) {
-        alert("Clock-in failed.");
+        console.error("Supabase Error:", error);
+        alert(`Clock-in failed: ${error.message}`);
         toggleClockBtn.disabled = false;
         updateClockUI(false);
         return;
@@ -232,13 +285,13 @@ if (toggleClockBtn) {
         const clockInTime = new Date(shift.clock_in);
         const roundedHours = calculateRoundedHours(clockInTime, now);
 
-        // Update Supabase database record
+        // Update Supabase Database
         await supabaseClient
           .from("shift_logs")
           .update({ clock_out: now.toISOString(), total_hours: roundedHours })
           .eq("id", activeShiftId);
 
-        // Send real-time payload to Google Sheets
+        // Send payload to Google Sheets
         if (GOOGLE_DOC_WEBAPP_URL && GOOGLE_DOC_WEBAPP_URL.trim() !== "") {
           try {
             fetch(GOOGLE_DOC_WEBAPP_URL, {
@@ -251,7 +304,7 @@ if (toggleClockBtn) {
                 clock_out: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
                 total_hours: roundedHours
               })
-            }).catch(err => console.error("Google Sheets payload failed:", err));
+            }).catch(err => console.error("Google Sheets sync failed:", err));
           } catch (e) {
             console.error("Google Sheets request skipped:", e);
           }
@@ -280,7 +333,9 @@ function updateClockUI(isClockedIn) {
   }
 }
 
-// 9. Load Employee Logs
+// ==========================================
+// 7. DISPLAY LOGS HISTORY
+// ==========================================
 async function loadLogs() {
   const { data: logs } = await supabaseClient
     .from("shift_logs")
@@ -315,7 +370,9 @@ function renderLogs(logs) {
   });
 }
 
-// 10. MANAGER TOOL: Edit Staff Shifts (Emma Only)
+// ==========================================
+// 8. MANAGER TOOLS: SHIFT ADJUSTMENTS
+// ==========================================
 async function setupManagerEditTool() {
   const clockCard = document.getElementById("tab-clockin");
   let managerSection = document.getElementById("manager-edit-section");
@@ -431,20 +488,13 @@ window.saveShiftEdit = async function(shiftId) {
   }
 };
 
-// 11. Load Schedule as a Simple List
+// ==========================================
+// 9. AUTOMATED SCHEDULE & ROSTER BUILDER
+// ==========================================
 async function loadWeeklyRoster() {
-  const adminBox = document.getElementById("admin-schedule-box");
   const rosterTitle = document.getElementById("roster-title");
   const rosterUpdated = document.getElementById("roster-updated");
   const tableContainer = document.querySelector(".table-container");
-
-  if (adminBox) {
-    if (isManager) {
-      adminBox.classList.remove("hidden");
-    } else {
-      adminBox.classList.add("hidden");
-    }
-  }
 
   const { data: roster } = await supabaseClient
     .from("weekly_roster")
@@ -490,35 +540,107 @@ async function loadWeeklyRoster() {
   tableContainer.innerHTML = listHTML;
 }
 
-// 12. Manager Schedule Publishing Handler
-const publishBtn = document.getElementById("publish-roster-btn");
-if (publishBtn) {
-  publishBtn.addEventListener("click", async () => {
-    const title = document.getElementById("admin-title-input")?.value.trim();
-    const content = document.getElementById("admin-content-input")?.value.trim();
+// Dynamic Manager Schedule Generator
+async function setupRosterBuilderUI() {
+  const adminBox = document.getElementById("admin-schedule-box");
+  if (!adminBox || !isManager) return;
 
-    if (!title || !content) {
-      alert("Please fill in both the week title and schedule details.");
-      return;
-    }
+  adminBox.classList.remove("hidden");
 
-    publishBtn.disabled = true;
-    publishBtn.textContent = "Publishing...";
+  // Fetch employees from Supabase to create selection dropdowns
+  const { data: employees } = await supabaseClient.from("employees").select("name");
+  const staffList = employees ? employees.map(e => e.name) : [];
 
-    const { error } = await supabaseClient
-      .from("weekly_roster")
-      .insert([{ week_title: title, image_url: content }]);
+  const { weekTitle, formattedDays } = getWeekDates(0);
 
-    if (error) {
-      alert("Failed to publish schedule: " + error.message);
-    } else {
-      alert("Weekly schedule published successfully!");
-      document.getElementById("admin-title-input").value = "";
-      document.getElementById("admin-content-input").value = "";
-      await loadWeeklyRoster();
-    }
+  adminBox.innerHTML = `
+    <h4>Manager Schedule Builder</h4>
+    
+    <label for="week-select">Select Week:</label>
+    <select id="week-select" style="margin-bottom: 12px; padding: 6px; width: 100%;">
+      <option value="0">Current Week</option>
+      <option value="1">Next Week</option>
+      <option value="2">2 Weeks Ahead</option>
+    </select>
 
-    publishBtn.disabled = false;
-    publishBtn.textContent = "Publish Schedule";
+    <div style="margin-bottom: 12px;">
+      <strong id="auto-week-title" style="font-size: 16px; color: var(--primary);">${weekTitle}</strong>
+    </div>
+
+    <div id="days-builder-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+
+    <button id="publish-roster-btn" class="btn" style="margin-top: 16px;">Publish Schedule</button>
+  `;
+
+  renderDayInputs(formattedDays, staffList);
+
+  // Auto-update dates when manager switches weeks
+  document.getElementById("week-select").addEventListener("change", (e) => {
+    const selectedOffset = parseInt(e.target.value);
+    const updated = getWeekDates(selectedOffset);
+    document.getElementById("auto-week-title").textContent = updated.weekTitle;
+    renderDayInputs(updated.formattedDays, staffList);
   });
+
+  // Handle Publishing
+  document.getElementById("publish-roster-btn").addEventListener("click", () => publishGeneratedRoster());
+}
+
+function renderDayInputs(days, staffList) {
+  const container = document.getElementById("days-builder-container");
+  if (!container) return;
+
+  let html = "";
+  days.forEach((dayLabel, index) => {
+    html += `
+      <div style="display: flex; gap: 8px; align-items: center; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #ddd; flex-wrap: wrap;">
+        <span style="min-width: 140px; font-weight: 600;">${dayLabel}:</span>
+        <input type="text" id="shift-time-${index}" placeholder="e.g. 8:00 AM - 4:00 PM" style="flex: 1; min-width: 150px; padding: 4px;" />
+        <select id="shift-staff-${index}" style="padding: 4px; min-width: 130px;">
+          <option value="">-- Unassigned --</option>
+          ${staffList.map(name => `<option value="${name}">${name}</option>`).join('')}
+        </select>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+async function publishGeneratedRoster() {
+  const weekTitle = document.getElementById("auto-week-title").textContent;
+  const daysContainer = document.getElementById("days-builder-container");
+  const rows = daysContainer.querySelectorAll("div");
+
+  let contentLines = [];
+  rows.forEach((row, index) => {
+    const dayText = row.querySelector("span").textContent;
+    const timeVal = document.getElementById(`shift-time-${index}`).value.trim();
+    const staffVal = document.getElementById(`shift-staff-${index}`).value;
+
+    if (timeVal || staffVal) {
+      contentLines.push(`${dayText}: ${staffVal ? staffVal + " (" + timeVal + ")" : timeVal}`);
+    } else {
+      contentLines.push(`${dayText}: Off / Unassigned`);
+    }
+  });
+
+  const fullContent = contentLines.join("\n");
+
+  const publishBtn = document.getElementById("publish-roster-btn");
+  publishBtn.disabled = true;
+  publishBtn.textContent = "Publishing...";
+
+  const { error } = await supabaseClient
+    .from("weekly_roster")
+    .insert([{ week_title: weekTitle, image_url: fullContent }]);
+
+  if (error) {
+    alert("Error publishing schedule: " + error.message);
+  } else {
+    alert("Schedule published successfully!");
+    await loadWeeklyRoster();
+  }
+
+  publishBtn.disabled = false;
+  publishBtn.textContent = "Publish Schedule";
 }
